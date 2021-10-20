@@ -17,6 +17,10 @@ FAIL = Fore.RED + "  [FAIL] " + Fore.RESET
 release_list = dict()
 missing_files = []
 
+username = ""
+password = ""
+site = "https://www.srrdb.com/"
+
 def arg_parse():
     parser = argparse.ArgumentParser(
         description='automated rescening of unrarred/renamed scene files',
@@ -105,11 +109,11 @@ def find_file(startdir, fname, fcrc):
 
     return False
 
-def search_srrdb_crc(crc):
+def search_srrdb_crc(s, crc):
     #search srrdb for releases matching crc32
     verbose("\t - Searching srrdb.com for matching CRC", end="")
     try:
-        results = search_by_crc(crc)
+        results = search_by_crc(s, crc)
     except Exception as e:
         verbose("%s -> %s" % (FAIL, e))
         return False
@@ -133,7 +137,7 @@ def search_srrdb_crc(crc):
 
     return release
 
-def check_file(args, fpath):
+def check_file(s, args, fpath):
     if not os.path.splitext(fpath)[1] in args['extension']:
         return False
     if args['min_filesize'] and os.path.getsize(fpath) < args['min_filesize']:
@@ -156,7 +160,7 @@ def check_file(args, fpath):
     else:
         verbose("%s -> %s" % (SUCCESS, release_crc))
 
-    release = search_srrdb_crc(release_crc)
+    release = search_srrdb_crc(s, release_crc)
     if not release:
         return False
     else:
@@ -173,7 +177,7 @@ def check_file(args, fpath):
     verbose("\t - Downloading SRR from srrdb.com", end="")
     # download srr
     try:
-        srr_path = download_srr(release['release'])
+        srr_path = download_srr(s, release['release'])
     except Exception as e:
         verbose("%s -> %s" % (FAIL, e))
         return False
@@ -319,15 +323,24 @@ if __name__ == "__main__":
         if not os.path.isdir(args['output']):
             sys.exit("output option needs to be a valid directory")
         verbose("Setting output directory to: " + args['output'] + "\n")
+		
+    verbose("\t - Connecting srrdb.com...", end="")
+    s = requests.session()
+    s.post(site + "account/login", data={"username": username, "password": password})
+	
+    if not "uid" in s.cookies:
+        verbose("%s" % (FAIL))
+    else:
+        verbose("%s" % SUCCESS)
 
     cwd = os.getcwd()
     for path in args['input']:
         if os.path.isfile(path):
-            check_file(args, path)
+            check_file(s, args, path)
         elif os.path.isdir(path):
             for root, dirs, files in os.walk(path):
                 for sfile in files:
-                    check_file(args, os.path.join(root, sfile))
+                    check_file(s, args, os.path.join(root, sfile))
 
     if len(missing_files) > 0:
         print("Rescene process complete, the following files need to be manually aquired:")

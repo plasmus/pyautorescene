@@ -7,7 +7,7 @@ srrdb_api 	= "http://www.srrdb.com/api/search/"
 srrdb_download 	= "http://www.srrdb.com/download/srr/"
 srrdb_details 	= "http://www.srrdb.com/release/details/"
 
-def search_by_crc(crc):
+def search_by_crc(so, crc):
     if len(crc) != 8:
         #crc must have 8 characters
         raise ValueError("CRC must have length of 8")
@@ -15,7 +15,7 @@ def search_by_crc(crc):
     crc_search = srrdb_api + "archive-crc:" + crc
 
     try:
-        response = requests.get(crc_search)
+        response = so.get(crc_search)
         data = response.json()
     except:
         raise
@@ -26,7 +26,7 @@ def search_by_crc(crc):
     return data['results']
 
 
-def download_srr(rls, path=None):
+def download_srr(so, rls, path=None):
     if not rls or rls == "":
         raise ValueError("Release must have a valid name")
 
@@ -42,7 +42,7 @@ def download_srr(rls, path=None):
     path = os.path.join(path, os.path.basename(srr_download + ".srr"))
 
     try:
-        response = requests.get(srr_download)
+        response = so.get(srr_download)
 
         if response.content == "The requested file does not exist.":
             return (False, "Release does not exist on srrdb.com")
