@@ -15,6 +15,8 @@ def search_by_crc(so, crc):
     crc_search = srrdb_api + "archive-crc:" + crc
 
     try:
+        if not "uid" in so.cookies:
+            auth()								   
         response = so.get(crc_search)
         data = response.json()
     except:
@@ -42,6 +44,8 @@ def download_srr(so, rls, path=None):
     path = os.path.join(path, os.path.basename(srr_download + ".srr"))
 
     try:
+        if not "uid" in so.cookies:
+            auth()								   
         response = so.get(srr_download)
 
         if response.content == "The requested file does not exist.":

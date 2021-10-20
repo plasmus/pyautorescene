@@ -305,6 +305,17 @@ def check_file(s, args, fpath):
         if args['find_subs']:
             print("finding subs")
 
+def auth():
+    verbose("\t - Connecting srrdb.com...", end="")
+    global s 
+    s = requests.session()
+    s.post(site + "account/login", data={"username": username, "password": password})
+	
+    if not "uid" in s.cookies:
+        verbose("%s" % (FAIL))
+    else:
+        verbose("%s" % SUCCESS)
+		
 if __name__ == "__main__":
     args = arg_parse()
     # initialize pretty colours
@@ -333,6 +344,7 @@ if __name__ == "__main__":
     else:
         verbose("%s" % SUCCESS)
 
+    auth()		  
     cwd = os.getcwd()
     for path in args['input']:
         if os.path.isfile(path):
