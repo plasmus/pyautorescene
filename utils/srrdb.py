@@ -66,6 +66,7 @@ def search_by_oso(so, hashfile):
         return None
 
     return data['results']
+
 def download_srr(so, rls, path=None):
     if not rls or rls == "":
         raise ValueError("Release must have a valid name")
