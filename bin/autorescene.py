@@ -144,7 +144,19 @@ def search_srrdb_crc(s, crc, rlsname):
 
         if not results:
             verbose("%s -> %s" % (FAIL, "No matching results"))
-            return False
+            verbose("\t - Searching srrdb.com for matching OSO hash", end="")
+            try:
+                OSOhash = calc_oso(fpath)
+                results = search_by_oso(s, rlsname)
+            except Exception as e:
+                verbose("%s -> %s" % (FAIL, e))
+                return False
+
+            if not results:
+                verbose("%s -> %s" % (FAIL, "No matching results"))
+                return False
+            else:
+                verbose("%s" % SUCCESS)
         else:
             verbose("%s" % SUCCESS)
 
