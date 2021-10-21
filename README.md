@@ -4,17 +4,18 @@ Forked from [sticki](https://bitbucket.org/sticki/pyautorescene)
 
 pyautorescene
 =============
-pyautorescene automates the process of returning un-rarred scene releases back into their former glory.  It makes use of [PyReScene](https://bitbucket.org/Gfy/pyrescene) and [srrDB](http://srrdb.com) to make the whole process has hands off as possible.
+pyautorescene automates the process of returning un-rarred scene releases back into their former glory.  It makes use of [PyReScene](https://bitbucket.org/Gfy/pyrescene) and [srrDB](http://srrdb.com) to make the whole process has hands off as possible. With this fork, it is possible to log in your srrdb account to bypass the daily download limit of srr.
 
 Requirements
 ------------
-The main requirement is that you have already installed PyReScene from source as per the [instructions](https://bitbucket.org/Gfy/pyrescene).  This tool does not work with the pre-compiled .exes.
+The main requirement is that you have already installed PyReScene from source as per the [instructions](https://web.archive.org/web/20190118053832/https://bitbucket.org/Gfy/pyrescene/src/).  This tool does not work with the pre-compiled .exes.
 
 Installation
 ------------
 1. Clone this repository to your local machine
 2. Via terminal/command prompt navigate to the folder
-3. Run `python setup.py install`
+3. Edit bin/autorescene.py and fill username/password to login your srrdb account 
+4. Run `python setup.py install`
 
 Usage
 -----
