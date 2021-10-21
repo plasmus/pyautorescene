@@ -115,7 +115,7 @@ def find_file(startdir, fname, fcrc):
 
     return False
 
-def search_srrdb_crc(s, crc, rlsname):
+def search_srrdb_crc(s, crc, rlspath):
     #search srrdb for releases matching crc32
     verbose("\t - Searching srrdb.com for matching CRC", end="")
     try:
@@ -136,7 +136,7 @@ def search_srrdb_crc(s, crc, rlsname):
         verbose("\t\t %s More than one release found matching CRC %s." % (FAIL, crc))
         verbose("\t - Searching srrdb.com for matching release name", end="")
         try:
-            rlsname = os.path.basename(fpath)
+            rlsname = os.path.basename(rlspath)
             results = search_by_name(s, rlsname)
         except Exception as e:
             verbose("%s -> %s" % (FAIL, e))
@@ -146,7 +146,7 @@ def search_srrdb_crc(s, crc, rlsname):
             verbose("%s -> %s" % (FAIL, "No matching results"))
             verbose("\t - Searching srrdb.com for matching OSO hash", end="")
             try:
-                OSOhash = calc_oso(fpath)
+                OSOhash = calc_oso(rlsname)
                 results = search_by_oso(s, rlsname)
             except Exception as e:
                 verbose("%s -> %s" % (FAIL, e))
@@ -166,7 +166,7 @@ def search_srrdb_crc(s, crc, rlsname):
         verbose("\t\t %s More than one release found matching release name %s." % (FAIL, rlsname))
         verbose("\t - Searching srrdb.com for matching OSO hash", end="")
         try:
-            OSOhash = calc_oso(fpath)
+            OSOhash = calc_oso(rlsname)
             results = search_by_oso(s, rlsname)
         except Exception as e:
             verbose("%s -> %s" % (FAIL, e))
