@@ -9,6 +9,7 @@ import zlib
 from utils.srrdb import *
 from utils.srr import SRR
 from utils.srs import SRS
+from rescene.osohash import compute_hash, osohash_from
 
 SUCCESS = Fore.GREEN + "  [SUCCESS] " + Fore.RESET
 FAIL = Fore.RED + "  [FAIL] " + Fore.RESET
@@ -72,6 +73,11 @@ def calc_crc(fpath):
 
     return "%08X"%(prev & 0xFFFFFFFF)
 
+def calc_oso(self, fname):
+    oso_hash = compute_hash(fname)
+
+    return oso_hash
+
 def copy_file(finput, foutput):
     if not os.path.isfile(finput):
         raise ValueError("finput must be a file")
@@ -130,7 +136,26 @@ def search_srrdb_crc(s, crc, rlsname):
         verbose("\t\t %s More than one release found matching CRC %s." % (FAIL, crc))
         verbose("\t - Searching srrdb.com for matching release name", end="")
         try:
+            rlsname = os.path.basename(fpath)
             results = search_by_name(s, rlsname)
+        except Exception as e:
+            verbose("%s -> %s" % (FAIL, e))
+            return False
+
+        if not results:
+            verbose("%s -> %s" % (FAIL, "No matching results"))
+            return False
+        else:
+            verbose("%s" % SUCCESS)
+
+    #handle multiple releases having same name 
+    # (this should only happen with dupe srr's being uploaded)
+    if len(results) > 1:
+        verbose("\t\t %s More than one release found matching release name %s." % (FAIL, rlsname))
+        verbose("\t - Searching srrdb.com for matching OSO hash", end="")
+        try:
+            OSOhash = calc_oso(fpath)
+            results = search_by_oso(s, rlsname)
         except Exception as e:
             verbose("%s -> %s" % (FAIL, e))
             return False
@@ -173,7 +198,7 @@ def check_file(s, args, fpath):
     else:
         verbose("%s -> %s" % (SUCCESS, release_crc))
 
-    release = search_srrdb_crc(s, release_crc, os.path.basename(fpath))
+    release = search_srrdb_crc(s, release_crc, fpath)
     if not release:
         return False
     else:

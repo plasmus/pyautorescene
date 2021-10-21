@@ -47,6 +47,25 @@ def search_by_name(so, name):
 
     return data['results']
 
+def search_by_oso(so, hashfile):
+    if not hashfile or hashfile == "":
+        raise ValueError("Release must have a valid OSO hash")
+
+    name_search = srrdb_api + "isdbhash:" + hashfile
+		
+    try:
+        if not "uid" in so.cookies:
+            auth()
+		
+        response = so.get(name_search)
+        data = response.json()
+    except:
+        raise
+
+    if 'resultsCount' not in data or int(data['resultsCount']) < 1:
+        return None
+
+    return data['results']
 def download_srr(so, rls, path=None):
     if not rls or rls == "":
         raise ValueError("Release must have a valid name")
