@@ -31,8 +31,7 @@ def search_by_name(so, name):
     if not name or name == "":
         raise ValueError("Release must have a valid name")
 
-    name.rsplit( ".", 1 )[ 0 ]
-    name_search = srrdb_api + "r:" + name
+    name_search = srrdb_api + "r:" + name.rsplit( ".", 1 )[ 0 ]
 		
     try:
         if not "uid" in so.cookies:
