@@ -109,7 +109,7 @@ def find_file(startdir, fname, fcrc):
 
     return False
 
-def search_srrdb_crc(s, crc):
+def search_srrdb_crc(s, crc, rlsname):
     #search srrdb for releases matching crc32
     verbose("\t - Searching srrdb.com for matching CRC", end="")
     try:
@@ -127,8 +127,21 @@ def search_srrdb_crc(s, crc):
     #handle multiple releases having same crc32 
     # (this should only happen with dupe srr's being uploaded)
     if len(results) > 1:
-        #we need to work out which rls to use
-        #check filename/size/etc
+        verbose("\t\t %s More than one release found matching CRC %s." % (FAIL, crc))
+        verbose("\t - Searching srrdb.com for matching release name", end="")
+        try:
+            results = search_by_name(s, rlsname)
+        except Exception as e:
+            verbose("%s -> %s" % (FAIL, e))
+            return False
+
+        if not results:
+            verbose("%s -> %s" % (FAIL, "No matching results"))
+            return False
+        else:
+            verbose("%s" % SUCCESS)
+
+    if len(results) > 1:
         verbose("\t\t %s More than one release found matching CRC %s. This is most likely an issue, please report it on IRC (#srrdb @ irc.efnet.net)." % (FAIL, crc))
         return False
 
@@ -160,7 +173,7 @@ def check_file(s, args, fpath):
     else:
         verbose("%s -> %s" % (SUCCESS, release_crc))
 
-    release = search_srrdb_crc(s, release_crc)
+    release = search_srrdb_crc(s, release_crc, os.path.basename(fpath))
     if not release:
         return False
     else:
@@ -315,7 +328,7 @@ def auth():
         verbose("%s" % (FAIL))
     else:
         verbose("%s" % SUCCESS)
-		
+
 if __name__ == "__main__":
     args = arg_parse()
     # initialize pretty colours
@@ -334,17 +347,8 @@ if __name__ == "__main__":
         if not os.path.isdir(args['output']):
             sys.exit("output option needs to be a valid directory")
         verbose("Setting output directory to: " + args['output'] + "\n")
-		
-    verbose("\t - Connecting srrdb.com...", end="")
-    s = requests.session()
-    s.post(site + "account/login", data={"username": username, "password": password})
-	
-    if not "uid" in s.cookies:
-        verbose("%s" % (FAIL))
-    else:
-        verbose("%s" % SUCCESS)
 
-    auth()		  
+    auth()
     cwd = os.getcwd()
     for path in args['input']:
         if os.path.isfile(path):
