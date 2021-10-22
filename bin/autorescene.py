@@ -73,8 +73,11 @@ def calc_crc(fpath):
 
     return "%08X"%(prev & 0xFFFFFFFF)
 
-def calc_oso(self, fname):
-    oso_hash = compute_hash(fname)
+def calc_oso(fname):
+    if not os.path.isfile(fname):
+        return None
+
+    (oso_hash, file_size) = compute_hash(fname)
 
     return oso_hash
 
@@ -142,12 +145,12 @@ def search_srrdb_crc(s, crc, rlspath):
             verbose("%s -> %s" % (FAIL, e))
             return False
 
-        if not results:
+        if not results or len(results) > 1:
             verbose("%s -> %s" % (FAIL, "No matching results"))
             verbose("\t - Searching srrdb.com for matching OSO hash", end="")
             try:
-                OSOhash = calc_oso(rlsname)
-                results = search_by_oso(s, rlsname)
+                OSOhash = calc_oso(rlspath)
+                results = search_by_oso(s, OSOhash)
             except Exception as e:
                 verbose("%s -> %s" % (FAIL, e))
                 return False
@@ -160,26 +163,8 @@ def search_srrdb_crc(s, crc, rlspath):
         else:
             verbose("%s" % SUCCESS)
 
-    #handle multiple releases having same name 
-    # (this should only happen with dupe srr's being uploaded)
     if len(results) > 1:
-        verbose("\t\t %s More than one release found matching release name %s." % (FAIL, rlsname))
-        verbose("\t - Searching srrdb.com for matching OSO hash", end="")
-        try:
-            OSOhash = calc_oso(rlsname)
-            results = search_by_oso(s, rlsname)
-        except Exception as e:
-            verbose("%s -> %s" % (FAIL, e))
-            return False
-
-        if not results:
-            verbose("%s -> %s" % (FAIL, "No matching results"))
-            return False
-        else:
-            verbose("%s" % SUCCESS)
-
-    if len(results) > 1:
-        verbose("\t\t %s More than one release found matching CRC %s. This is most likely an issue, please report it on IRC (#srrdb @ irc.efnet.net)." % (FAIL, crc))
+        verbose("\t\t %s More than one release found matching OSO hash %s. This is most likely an issue, please report it on IRC (#srrdb @ irc.efnet.net)." % (FAIL, OSOhash))
         return False
 
     release = results[0]
