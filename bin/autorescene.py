@@ -22,7 +22,7 @@ username = ""
 password = ""
 site = "https://www.srrdb.com/"
 rar_version = "C:\\Python39\\pyrescene-master\\rarv"
-srr_temp_foder = "Z:\\DL2\\tmp"
+srr_temp_foder = "F:\\tmp"
 
 def arg_parse():
     parser = argparse.ArgumentParser(
