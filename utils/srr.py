@@ -68,15 +68,20 @@ class SRR:
 
         return matches
 
-    def reconstruct_rars(self, dinput, doutput, hints):
+    def reconstruct_rars(self, dinput, doutput, hints, rarfolder, tmpfolder):
         if not os.path.isdir(dinput):
             raise AttributeError("input folder must be a valid directory.")
         if not os.path.isdir(doutput):
             raise AttributeError("output folder must be a valid directory")
+        if not os.path.isdir(rarfolder):
+            raise AttributeError("rar folder must be a valid directory.")
+        if not os.path.isdir(tmpfolder):
+            os.mkdir(tmpfolder)
 
         try:
             res = reconstruct(self.filename, dinput, doutput, hints=hints,
-                              auto_locate_renamed=True, extract_files=False)
+                              auto_locate_renamed=True, rar_executable_dir=rarfolder,
+                              tmp_dir=tmpfolder, extract_files=False)
 
             if res == -1:
                 raise ValueError("One or more of the original files already exist in " + doutput)

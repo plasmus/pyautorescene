@@ -21,6 +21,8 @@ missing_files = []
 username = ""
 password = ""
 site = "https://www.srrdb.com/"
+rar_version = "C:\\Python39\\pyrescene-master\\rarv"
+srr_temp_foder = "Z:\\DL2\\tmp"
 
 def arg_parse():
     parser = argparse.ArgumentParser(
@@ -275,7 +277,7 @@ def check_file(s, args, fpath):
 
         rename_hints = {srr_finfo[0].file_name: os.path.basename(fpath)}
         try:
-            release_srr.reconstruct_rars(os.path.dirname(fpath), doutput, rename_hints)
+            release_srr.reconstruct_rars(os.path.dirname(fpath), doutput, rename_hints, rar_version, srr_temp_foder)
         except Exception as e:
             verbose("%s -> %s" % (FAIL, e))
 
