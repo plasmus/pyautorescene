@@ -89,6 +89,7 @@ class SRR:
             except:
                 raise
         else:
+            try:
                 res = reconstruct(self.filename, dinput, doutput, hints=hints,
                                   auto_locate_renamed=True, extract_files=False)
 
