@@ -73,19 +73,28 @@ class SRR:
             raise AttributeError("input folder must be a valid directory.")
         if not os.path.isdir(doutput):
             raise AttributeError("output folder must be a valid directory")
-        if not os.path.isdir(rarfolder):
-            raise AttributeError("rar folder must be a valid directory.")
-        if not os.path.isdir(tmpfolder):
-            os.mkdir(tmpfolder)
+        if os.name == 'nt':
+            if not os.path.isdir(rarfolder):
+                raise AttributeError("rar folder must be a valid directory.")
+            if not os.path.isdir(tmpfolder):
+                os.mkdir(tmpfolder)
 
-        try:
-            res = reconstruct(self.filename, dinput, doutput, hints=hints,
-                              auto_locate_renamed=True, rar_executable_dir=rarfolder,
-                              tmp_dir=tmpfolder, extract_files=False)
+            try:
+                res = reconstruct(self.filename, dinput, doutput, hints=hints,
+                                  auto_locate_renamed=True, rar_executable_dir=rarfolder,
+                                  tmp_dir=tmpfolder, extract_files=False)
 
-            if res == -1:
-                raise ValueError("One or more of the original files already exist in " + doutput)
-        except:
-            raise
+                if res == -1:
+                    raise ValueError("One or more of the original files already exist in " + doutput)
+            except:
+                raise
+        else:
+                res = reconstruct(self.filename, dinput, doutput, hints=hints,
+                                  auto_locate_renamed=True, extract_files=False)
+
+                if res == -1:
+                    raise ValueError("One or more of the original files already exist in " + doutput)
+            except:
+                raise
 
         return True
