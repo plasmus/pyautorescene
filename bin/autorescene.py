@@ -220,16 +220,8 @@ def search_srrdb_crc(crc, rlspath):
         verbose("%s -> %s" % (FAIL, e))
         return False
 
-    if not results:
+    if not results or len(results) > 1:
         verbose("%s -> %s" % (FAIL, "No matching results"))
-        return False
-    else:
-        verbose("%s" % SUCCESS)
-
-    #handle multiple releases having same crc32 
-    # (this should only happen with dupe srr's being uploaded)
-    if len(results) > 1:
-        verbose("\t\t %s More than one release found matching CRC %s." % (FAIL, crc))
         verbose("\t - Searching srrdb.com for matching release name", end="")
         try:
             rlsname = os.path.basename(rlspath)
@@ -248,17 +240,15 @@ def search_srrdb_crc(crc, rlspath):
                 verbose("%s -> %s" % (FAIL, e))
                 return False
 
-            if not results:
+            if not results or len(results) > 1:
                 verbose("%s -> %s" % (FAIL, "No matching results"))
                 return False
             else:
                 verbose("%s" % SUCCESS)
         else:
             verbose("%s" % SUCCESS)
-
-    if len(results) > 1:
-        verbose("\t\t %s More than one release found matching OSO hash %s. This is most likely an issue, please report it on IRC (#srrdb @ irc.efnet.net)." % (FAIL, OSOhash))
-        return False
+    else:
+        verbose("%s" % SUCCESS)
 
     release = results[0]
     verbose("\t\t - Matched release: %s" % release['release'])
