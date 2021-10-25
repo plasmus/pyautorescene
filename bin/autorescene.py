@@ -5,8 +5,11 @@ import argparse, os, sys, errno
 from colorama import Fore, init
 import shutil
 import zlib
+import json
+import tempfile
+import requests
 
-from utils.srrdb import *
+from utils.connect import SRRDB_LOGIN
 from utils.srr import SRR
 from utils.srs import SRS
 from rescene.osohash import compute_hash, osohash_from
@@ -21,6 +24,8 @@ missing_files = []
 username = ""
 password = ""
 site = "https://www.srrdb.com/"
+srrdb_api 	= "http://www.srrdb.com/api/search/"
+srrdb_download 	= "http://www.srrdb.com/download/srr/"
 rar_version = "C:\\Python39\\pyrescene-master\\rarv"
 srr_temp_foder = "F:\\tmp"
 
@@ -64,6 +69,92 @@ def arg_parse():
     args = parser.parse_args()
 
     return vars(args)
+
+def search_by_crc(crc):
+    if len(crc) != 8:
+        #crc must have 8 characters
+        raise ValueError("CRC must have length of 8")
+
+    crc_search = srrdb_api + "archive-crc:" + crc
+
+    try:
+        response = s.retrieveContent(crc_search)
+        data = response.json()
+    except:
+        raise
+
+    if 'resultsCount' not in data or int(data['resultsCount']) < 1:
+        return None
+
+    return data['results']
+
+def search_by_name(name):
+    if not name or name == "":
+        raise ValueError("Release must have a valid name")
+
+    name_search = srrdb_api + "r:" + name.rsplit( ".", 1 )[ 0 ]
+		
+    try:		
+        response = s.retrieveContent(name_search)
+        data = response.json()
+    except:
+        raise
+
+    if 'resultsCount' not in data or int(data['resultsCount']) < 1:
+        return None
+
+    return data['results']
+
+def search_by_oso(hashfile):
+    if not hashfile or hashfile == "":
+        raise ValueError("Release must have a valid OSO hash")
+
+    name_search = srrdb_api + "isdbhash:" + hashfile
+		
+    try:
+        response = s.retrieveContent(name_search)
+        data = response.json()
+    except:
+        raise
+
+    if 'resultsCount' not in data or int(data['resultsCount']) < 1:
+        return None
+
+    return data['results']
+
+def download_srr(rls, path=None):
+    if not rls or rls == "":
+        raise ValueError("Release must have a valid name")
+
+    srr_download = srrdb_download + rls
+
+    if not path or path == "":
+        path = tempfile.gettempdir()
+
+    if not os.path.isdir(path):
+        raise IOError("Output directory \"", path, "\" does not exist.")
+
+    #create path for file to be stored
+    path = os.path.join(path, os.path.basename(srr_download + ".srr"))
+
+    try:
+        response = s.retrieveContent(srr_download)
+
+        if response.content == "The requested file does not exist.":
+            return (False, "Release does not exist on srrdb.com")
+
+        if response.content == "You've reached your daily download limit.":
+            return (False, "You've reached the daily SRR download limit.")
+
+        with open(path, "wb") as local_file:
+            for chunk in response.iter_content(chunk_size=1024):
+                if chunk:
+                    local_file.write(chunk)
+                    local_file.flush()
+    except:
+        raise
+
+    return path
 
 def calc_crc(fpath):
     if not os.path.isfile(fpath):
@@ -120,11 +211,11 @@ def find_file(startdir, fname, fcrc):
 
     return False
 
-def search_srrdb_crc(s, crc, rlspath):
+def search_srrdb_crc(crc, rlspath):
     #search srrdb for releases matching crc32
     verbose("\t - Searching srrdb.com for matching CRC", end="")
     try:
-        results = search_by_crc(s, crc)
+        results = search_by_crc(crc)
     except Exception as e:
         verbose("%s -> %s" % (FAIL, e))
         return False
@@ -142,7 +233,7 @@ def search_srrdb_crc(s, crc, rlspath):
         verbose("\t - Searching srrdb.com for matching release name", end="")
         try:
             rlsname = os.path.basename(rlspath)
-            results = search_by_name(s, rlsname)
+            results = search_by_name(rlsname)
         except Exception as e:
             verbose("%s -> %s" % (FAIL, e))
             return False
@@ -152,7 +243,7 @@ def search_srrdb_crc(s, crc, rlspath):
             verbose("\t - Searching srrdb.com for matching OSO hash", end="")
             try:
                 OSOhash = calc_oso(rlspath)
-                results = search_by_oso(s, OSOhash)
+                results = search_by_oso(OSOhash)
             except Exception as e:
                 verbose("%s -> %s" % (FAIL, e))
                 return False
@@ -174,7 +265,7 @@ def search_srrdb_crc(s, crc, rlspath):
 
     return release
 
-def check_file(s, args, fpath):
+def check_file(args, fpath):
     if not os.path.splitext(fpath)[1] in args['extension']:
         return False
     if args['min_filesize'] and os.path.getsize(fpath) < args['min_filesize']:
@@ -197,7 +288,7 @@ def check_file(s, args, fpath):
     else:
         verbose("%s -> %s" % (SUCCESS, release_crc))
 
-    release = search_srrdb_crc(s, release_crc, fpath)
+    release = search_srrdb_crc(release_crc, fpath)
     if not release:
         return False
     else:
@@ -214,7 +305,7 @@ def check_file(s, args, fpath):
     verbose("\t - Downloading SRR from srrdb.com", end="")
     # download srr
     try:
-        srr_path = download_srr(s, release['release'])
+        srr_path = download_srr(release['release'])
     except Exception as e:
         verbose("%s -> %s" % (FAIL, e))
         return False
@@ -342,17 +433,6 @@ def check_file(s, args, fpath):
         if args['find_subs']:
             print("finding subs")
 
-def auth():
-    verbose("\t - Connecting srrdb.com...", end="")
-    global s 
-    s = requests.session()
-    s.post(site + "account/login", data={"username": username, "password": password})
-	
-    if not "uid" in s.cookies:
-        verbose("%s" % (FAIL))
-    else:
-        verbose("%s" % SUCCESS)
-
 if __name__ == "__main__":
     args = arg_parse()
     # initialize pretty colours
@@ -372,15 +452,26 @@ if __name__ == "__main__":
             sys.exit("output option needs to be a valid directory")
         verbose("Setting output directory to: " + args['output'] + "\n")
 
-    auth()
+    loginData = {"username": username, "password": password}
+    loginUrl = site + "account/login"
+    loginTestUrl = "https://www.srrdb.com/"
+    loginTestString = username
+    verbose("\t - Connecting srrdb.com...", end="")
+    try:
+        s = SRRDB_LOGIN(loginUrl, loginData, loginTestUrl, loginTestString)
+    except Exception as e:
+        verbose("%s -> %s" % (FAIL, e))
+    else:
+        verbose("%s" % (SUCCESS))
+
     cwd = os.getcwd()
     for path in args['input']:
         if os.path.isfile(path):
-            check_file(s, args, path)
+            check_file(args, path)
         elif os.path.isdir(path):
             for root, dirs, files in os.walk(path):
                 for sfile in files:
-                    check_file(s, args, os.path.join(root, sfile))
+                    check_file(args, os.path.join(root, sfile))
 
     if len(missing_files) > 0:
         print("Rescene process complete, the following files need to be manually aquired:")
