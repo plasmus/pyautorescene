@@ -19,7 +19,7 @@ class SRRDB_LOGIN:
                  sessionFileAppendix = "_session.dat",
                  maxSessionTimeSeconds = 30 * 60,
                  proxies = None,
-                 userAgent = "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.1",
+                 userAgent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36",
                  debug = True,
                  forceLogin = False,
                  **kwargs):
