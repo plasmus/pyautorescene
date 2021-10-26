@@ -140,10 +140,10 @@ def download_srr(rls, path=None):
     try:
         response = s.retrieveContent(srr_download)
 
-        if response.content == "The SRR file does not exist.":
+        if response.text == "The SRR file does not exist.":
             return (False, "Release does not exist on srrdb.com")
 
-        if response.content == "You've reached your daily download limit.":
+        if response.text == "You've reached your daily download limit.":
             return (False, "You've reached the daily SRR download limit.")
 
         with open(path, "wb") as local_file:
