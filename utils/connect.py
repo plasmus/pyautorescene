@@ -20,7 +20,7 @@ class SRRDB_LOGIN:
                  maxSessionTimeSeconds = 30 * 60,
                  proxies = None,
                  userAgent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36",
-                 debug = True,
+                 debug = False,
                  forceLogin = False,
                  **kwargs):
         """
@@ -85,7 +85,7 @@ class SRRDB_LOGIN:
         with open(self.sessionFile, "wb") as f:
             pickle.dump(self.session, f)
             if self.debug:
-                print("\t - Updated session cache-file %s " % self.sessionFile, end="")
+                print("\n\t - Updated session cache-file %s " % self.sessionFile, end="")
 
     def retrieveContent(self, url, method = "get", postData = None, **kwargs):
         if method == 'get':
