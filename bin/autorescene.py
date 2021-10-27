@@ -8,6 +8,7 @@ import zlib
 import json
 import tempfile
 import requests
+import time
 
 from utils.connect import SRRDB_LOGIN
 from utils.srr import SRR
@@ -144,7 +145,8 @@ def download_srr(rls, path=None):
             return (False, "Release does not exist on srrdb.com")
 
         if response.text == "You've reached your daily download limit.":
-            return (False, "You've reached the daily SRR download limit.")
+            time.sleep(5)
+            response = s.retrieveContent(srr_download)
 
         with open(path, "wb") as local_file:
             for chunk in response.iter_content(chunk_size=1024):
