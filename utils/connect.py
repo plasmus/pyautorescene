@@ -1,6 +1,7 @@
 import pickle
 import datetime
 import os
+import tempfile
 from urllib.parse import urlparse
 import requests
 
@@ -40,7 +41,8 @@ class SRRDB_LOGIN:
         self.loginUrl = loginUrl
         self.loginTestUrl = loginTestUrl
         self.maxSessionTime = maxSessionTimeSeconds
-        self.sessionFile = urlData.netloc + sessionFileAppendix
+        file = tempfile.gettempdir()
+        self.sessionFile = os.path.join(file, urlData.netloc + sessionFileAppendix)
         self.userAgent = userAgent
         self.loginTestString = loginTestString
         self.debug = debug
