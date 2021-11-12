@@ -26,7 +26,7 @@ username = ""
 password = ""
 site = "https://www.srrdb.com/"
 srrdb_api = "http://www.srrdb.com/api/search/"
-srrdb_download 	= "http://www.srrdb.com/download/srr/"
+srrdb_download = "http://www.srrdb.com/download/srr/"
 rar_version = "C:\\Python39\\pyrescene-master\\rarv"
 srr_temp_foder = "F:\\tmp"
 
@@ -59,7 +59,7 @@ def arg_parse():
                         help='extract stored files from srr (nfo, sfv, etc)')
     parser.add_argument('-e', '--extension', action='append', default=[],
                         help='list of extensions to check against srrdb '
-                        '(default: .mkv, .avi, .mp4)')
+                        '(default: .mkv, .avi, .mp4, .iso)')
     parser.add_argument('-m', '--min-filesize', help='set a minimum filesize in MB of a file to '
                         'check')
     parser.add_argument('--keep-srr', action='store_true',
@@ -444,7 +444,7 @@ if __name__ == "__main__":
     verbose = print if args['verbose'] else lambda *a, **k: None
 
     if not args['extension']:
-        args['extension'] = ['.mkv', '.avi', '.mp4']
+        args['extension'] = ['.mkv', '.avi', '.mp4', '.iso']
     if args['min_filesize']:
         #convert from MB to Bytes
         args['min_filesize'] = int(args['min_filesize']) * 1048576
