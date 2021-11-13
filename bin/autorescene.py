@@ -509,7 +509,13 @@ def check_dir(args, fpath):
         verbose("%s" % SUCCESS)
 
     release_srr = SRR(srr_path)
-#    srr_finfo = release_srr.get_archived_fname_by_crc(release_crc)
+    srr_finfo = release_srr.get_rars_name()
+    verbose("\t - Checking if all RAR are present in %s" % (fpath))
+    for match in srr_finfo:
+        if not os.path.exists(os.path.join(fpath, match)):
+            verbose("%s -> Be careful missing RAR file: %s" % (FAIL, match))
+        else:
+            verbose("%s -> %s" % (SUCCESS, match))
 
     if os.path.basename(doutput.lower()).lower() != release['release'].lower():
         #output dir is not specific to rls/doesnt match release
@@ -641,7 +647,7 @@ if __name__ == "__main__":
 
     cwd = os.getcwd()
     if args['check_extras']:
-        for path in args['input']:						  
+        for path in args['input']:
             if os.path.isdir(path):
                 for root, dirs, files in os.walk(path):
                     for dirname in dirs:

@@ -19,6 +19,15 @@ class SRR:
             else:
                 self.binary = binary
 
+    # search an srr for all rar-files presents
+    # returns array of FileInfo's
+    def get_rars_name(self):
+        matches = []
+
+        for sfile in info(self.filename)['rar_files'].keys():
+            matches.append(sfile)
+
+        return matches
     # search an srr for all archived-files that match given crc
     # returns array of FileInfo's matching the crc
     def get_archived_fname_by_crc(self, crc):
