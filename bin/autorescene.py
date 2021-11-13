@@ -46,7 +46,7 @@ def arg_parse():
                         help='recreate rars from extracted file/srr')
     parser.add_argument('-k', '--resample', action='store_true',
                         help='recreate sample from original file/srs')
-    parser.add_argument('--find-sample', action='store_true',
+    parser.add_argument('-f', '--find-sample', action='store_true',
                         help='if sample creation fails, look for sample file on disk')
     parser.add_argument('--find-subs', action='store_true',
                         help='look for sub rar if file is missing')
@@ -62,6 +62,10 @@ def arg_parse():
                         '(default: .mkv, .avi, .mp4, .iso)')
     parser.add_argument('-m', '--min-filesize', help='set a minimum filesize in MB of a file to '
                         'check')
+    parser.add_argument('-c', '--check-extras', action='store_true',
+                        help='check missing Sample/Proof, this will scan directories, '
+                        'check srrdb, and add into a release dir with original rars '
+                        'nfo/sfv/proof and recreate sample')
     parser.add_argument('--keep-srr', action='store_true',
                         help='keep srr in output directory')
     parser.add_argument('--keep-srs', action='store_true',
@@ -290,6 +294,7 @@ def search_srrdb_dirname(rlspath):
     verbose("\t\t - Matched release: %s" % release['release'])
 
     return release
+
 def check_file(args, fpath):
     if not os.path.splitext(fpath)[1] in args['extension']:
         return False
@@ -449,6 +454,11 @@ def check_file(args, fpath):
                     verbose("-------------------------------")
                     verbose("\t - %s -> sample recreated successfully" % (SUCCESS))
                     release_list[release['release']]['resample'] = True
+                    if not args['keep_srs']:
+                        if os.path.exists(srs_path):
+                            os.remove(srs_path)
+                        else:
+                            verbose("\t - Impossible to delete no SRS found %s" % (FAIL))
             else:
                 missing_files.append(release['release']+"/Sample/"+sample.get_filename())
         else:
@@ -484,7 +494,7 @@ def check_dir(args, fpath):
             release_list[release['release']]['rescene'] = True
             release_list[release['release']]['resample'] = False
             release_list[release['release']]['extract'] = False
-        elif release_list[release['release']]['rescene'] and release_list[release['release']]['resample']:
+        elif release_list[release['release']]['extract'] and release_list[release['release']]['resample']:
             verbose("\t - Skipping, already processed.")
             return True
 
@@ -516,10 +526,10 @@ def check_dir(args, fpath):
 
     verbose("\t - Setting output directory to: %s" % doutput)
 
-    if (args['extract_stored'] or args['auto_reconstruct']) and not release_list[release['release']]['extract']:
+    if (args['check_extras']) and not release_list[release['release']]['extract']:
         verbose("\t - Extracting stored files from SRR", end="")
         for fname in os.listdir(fpath):
-            if fname.endswith(".rar"):
+            if fname.endswith(".part01.rar") or fname.endswith(".rar"):
                 rar_path = os.path.join(fpath, fname)
         try:
             matches = release_srr.extract_stored_files_regex(doutput)
@@ -538,7 +548,7 @@ def check_dir(args, fpath):
                 verbose("\t\t - %s" % os.path.relpath(match[0], doutput))
             release_list[release['release']]['extract'] = True
 
-    if (args['resample'] or args['auto_reconstruct']) and not release_list[release['release']]['resample']:
+    if (args['check_extras']) and not release_list[release['release']]['resample']:
         if release['hasSRS'] == "yes":
             try:
                 srs_path
@@ -585,6 +595,11 @@ def check_dir(args, fpath):
                     verbose("-------------------------------")
                     verbose("\t - %s -> sample recreated successfully" % (SUCCESS))
                     release_list[release['release']]['resample'] = True
+                    if not args['keep_srs']:
+                        if os.path.exists(srs_path):
+                            os.remove(srs_path)
+                        else:
+                            verbose("\t - Impossible to delete no SRS found %s" % (FAIL))
             else:
                 missing_files.append(release['release']+"/Sample/"+sample.get_filename())
         else:
@@ -625,15 +640,20 @@ if __name__ == "__main__":
         verbose("%s" % (SUCCESS))
 
     cwd = os.getcwd()
-    for path in args['input']:
-        if os.path.isfile(path):
-            check_file(args, path)
-        elif os.path.isdir(path):
-            for root, dirs, files in os.walk(path):
-                for dirname in dirs:
+    if args['check_extras']:
+        for path in args['input']:						  
+            if os.path.isdir(path):
+                for root, dirs, files in os.walk(path):
+                    for dirname in dirs:
                         check_dir(args, os.path.join(root, dirname))
-                for sfile in files:
-                    check_file(args, os.path.join(root, sfile))
+    else:
+        for path in args['input']:
+            if os.path.isfile(path):
+                check_file(args, path)
+            elif os.path.isdir(path):
+                for root, dirs, files in os.walk(path):
+                    for sfile in files:
+                        check_file(args, os.path.join(root, sfile))
 
     if len(missing_files) > 0:
         print("Rescene process complete, the following files need to be manually aquired:")
