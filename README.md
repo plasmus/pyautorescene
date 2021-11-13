@@ -57,7 +57,9 @@ optional arguments:
   -e EXTENSION, --extension EXTENSION
                         list of extensions to check against srrdb (default:
                         .mkv, .avi, .mp4, .iso)
-  -c, --check-extras    check missing Sample/Proof, this will scan directories, check srrdb, and add into a release dir with original rars nfo/sfv/proof and recreate sample
+  -c, --check-extras    check missing Sample/Proof, this will scan directories, 
+                        check srrdb, and add into a release dir with original rars 
+                        nfo/sfv/proof and recreate sample
   --keep-srr            keep srr in output directory
   --keep-srs            keep srs in output directory
 ```
