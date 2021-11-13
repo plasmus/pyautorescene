@@ -66,4 +66,4 @@ optional arguments:
 
 To Do
 -----
-Add a feature to check if all the .rars are presents in the releases directory and in option check if they have the correct CRC before adding Sample/Proof/etc
+Add an option feature to check if all the .rars presents in the releases directory have the correct CRC before adding Sample/Proof/etc
