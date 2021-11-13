@@ -4,7 +4,9 @@ Forked from [sticki](https://bitbucket.org/sticki/pyautorescene)
 
 pyautorescene
 =============
-pyautorescene automates the process of returning un-rarred scene releases back into their former glory.  It makes use of [PyReScene](https://github.com/srrDB/pyrescene) and [srrDB](http://srrdb.com) to make the whole process has hands off as possible. With this fork, it is possible to log in your srrdb account to bypass the daily download limit of srr.
+pyautorescene automates the process of returning un-rarred scene releases back into their former glory.  It makes use of [PyReScene](https://github.com/srrDB/pyrescene) and [srrDB](http://srrdb.com) to make the whole process has hands off as possible. 
+With this fork, it is possible to log in your srrdb account to bypass the daily download limit of srr.
+Now it is also possible to add only Sample/Proof if you already have releases in scene format but no longer the unrarred .mkv.
 
 Requirements
 ------------
@@ -14,15 +16,20 @@ Installation
 ------------
 1. Clone this repository to your local machine
 2. Via terminal/command prompt navigate to the folder
-3. Edit bin/autorescene.py, fill username/password to login your srrdb account, 
-4. Fill rar_version with the path that you have the WinRAR executables (you must run preprardir.py before) and fill srr_temp_foder who is just a temp folder for the recompressing process. (**Doesn't work under linux...**)
+3. Edit `bin/autorescene.py`, fill `username/password` to login your srrdb account, 
+4. Fill `rar_version` with the path that you have the WinRAR executables (you must run `preprardir.py` before) and fill `srr_temp_foder` who is just a temp folder for the recompressing process. (**Doesn't work under linux...**)
 5. Run `python setup.py install`
 
 Usage
 -----
 Currently, the best and most tested method of executing this script is `autorescene.py -va --find-sample -o /path/to/output /path/to/input`
 
-It is **seriously** recommended to output to a completely separate folder that you're happy to delete. 
+It is **seriously** recommended to output to a completely separate folder that you're happy to delete.
+
+
+If you already have releases in scene format but no longer the unrarred .mkv do `autorescene.py -va -o /path/to/input /path/to/input`
+
+Only in this case you **must** use the same dir for the input and output because you only want to add the extra files in the release dir.
 
 ```
 stick$ autorescene.py --help
@@ -51,8 +58,11 @@ optional arguments:
   -x, --extract-stored  extract stored files from srr (nfo, sfv, etc)
   -e EXTENSION, --extension EXTENSION
                         list of extensions to check against srrdb (default:
-                        .mkv, .avi, .mp4)
+                        .mkv, .avi, .mp4, .iso)
   --keep-srr            keep srr in output directory
   --keep-srs            keep srs in output directory
 ```
 
+To Do
+-----
+Add a feature to check if all the .rars present in the releases directory have the correct CRC before adding Sample/Proof
