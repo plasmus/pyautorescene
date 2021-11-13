@@ -6,7 +6,7 @@ pyautorescene
 =============
 pyautorescene automates the process of returning un-rarred scene releases back into their former glory.  It makes use of [PyReScene](https://github.com/srrDB/pyrescene) and [srrDB](http://srrdb.com) to make the whole process has hands off as possible. 
 With this fork, it is possible to log in your srrdb account to bypass the daily download limit of srr.
-Now it is also possible to add only Sample/Proof if you already have releases in scene format but no longer the unrarred .mkv.
+Now it is also possible to add only nfo/sfv/Sample/Proof if you already have releases in scene format but no longer the unrarred .mkv.
 
 Requirements
 ------------
@@ -22,14 +22,12 @@ Installation
 
 Usage
 -----
-Currently, the best and most tested method of executing this script is `autorescene.py -va --find-sample -o /path/to/output /path/to/input`
+Currently, the best and most tested method of executing this script is `autorescene.py -vaf -o /path/to/output /path/to/input`
 
 It is **seriously** recommended to output to a completely separate folder that you're happy to delete.
 
 
-If you already have releases in scene format but no longer the unrarred .mkv do `autorescene.py -va -o /path/to/input /path/to/input`
-
-Only in this case you **must** use the same dir for the input and output because you only want to add the extra files in the release dir.
+If you already have releases in scene format but no longer the unrarred .mkv and you want to search against srrdb if you have missing files like nfo/sfv/Sample/Proof do `autorescene.py -vc /path/to/input`
 
 ```
 stick$ autorescene.py --help
@@ -49,7 +47,7 @@ optional arguments:
                         exists - this is the same as -jkx
   -j, --rescene         recreate rars from extracted file/srr
   -k, --resample        recreate sample from original file/srs
-  --find-sample         if sample creation fails, look for sample file on disk
+  -f, --find-sample     if sample creation fails, look for sample file on disk
   -o OUTPUT, --output OUTPUT
                         set the directory for all output
   -v, --verbose         verbose output for debugging purposes
@@ -59,10 +57,11 @@ optional arguments:
   -e EXTENSION, --extension EXTENSION
                         list of extensions to check against srrdb (default:
                         .mkv, .avi, .mp4, .iso)
+  -c, --check-extras    check missing Sample/Proof, this will scan directories, check srrdb, and add into a release dir with original rars nfo/sfv/proof and recreate sample
   --keep-srr            keep srr in output directory
   --keep-srs            keep srs in output directory
 ```
 
 To Do
 -----
-Add a feature to check if all the .rars present in the releases directory have the correct CRC before adding Sample/Proof
+Add a feature to check if all the .rars are presents in the releases directory and in option check if they have the correct CRC before adding Sample/Proof/etc
