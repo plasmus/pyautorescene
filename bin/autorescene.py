@@ -66,6 +66,8 @@ def arg_parse():
                         help='check missing Sample/Proof, this will scan directories, '
                         'check srrdb, and add into a release dir with original rars '
                         'nfo/sfv/proof and recreate sample')
+    parser.add_argument('--check-crc', action='store_true',
+                        help='check crc in sfv file when using --check-extras')
     parser.add_argument('--keep-srr', action='store_true',
                         help='keep srr in output directory')
     parser.add_argument('--keep-srs', action='store_true',
@@ -510,14 +512,55 @@ def check_dir(args, fpath):
 
     release_srr = SRR(srr_path)
     srr_finfo = release_srr.get_rars_name()
-    verbose("\t - Checking if all RAR are present in %s" % (fpath))
-    for match in srr_finfo:
-        if not os.path.exists(os.path.join(fpath, match)):
-            verbose("\t\t - %s -> Be careful missing RAR file: %s" % (FAIL, match))
-            missing_files.append(release['release']+match)
-        else:
-            verbose("\t\t - %s -> %s" % (SUCCESS, match))
-            release_list[release['release']]['rescene'] = True
+    if not args['check_crc']:
+        verbose("\t - Checking if all RAR are present in %s" % (fpath))
+        for match in srr_finfo:
+            if not os.path.exists(os.path.join(fpath, match)):
+                verbose("\t\t - %s -> Be careful missing RAR file: %s" % (FAIL, match))
+                missing_files.append(release['release']+"/"+match)
+            else:
+                verbose("\t\t - %s -> %s" % (SUCCESS, match))
+
+        release_list[release['release']]['rescene'] = True
+
+    elif args['check_crc']:
+        verbose("\t - Checking if all RAR have good CRC in %s" % (fpath))
+        for fname in os.listdir(fpath):
+            if fname.endswith(".sfv"):
+                sfv_path = os.path.join(fpath, fname)
+
+        try:
+            sfv = open(sfv_path, "r")
+        except Exception as e:
+            verbose("\t\t - %s - Could not open sfv file %s -> %s" % (FAIL, sfv_path, e))
+
+        good = bad = miss = 0
+        for line in sfv:
+            # Skip comments.
+            if line[0] == ';': continue
+
+            filename, _, crc = line.rstrip().rpartition(' ')
+
+            if not (filename and crc): continue
+
+            if not os.path.exists(os.path.join(fpath, filename)):
+                miss += 1
+                verbose("\t\t - %s -> Be careful missing RAR file: %s" % (FAIL, filename))
+                missing_files.append(release['release']+"/"+filename)
+
+                continue
+
+            hash = calc_crc(os.path.join(fpath, filename))
+            if hash.lower() == crc.lower():
+                good += 1
+                verbose("\t\t - %s -> %s %s" % (SUCCESS, filename, hash.upper()))
+            else:
+                bad += 1
+                verbose("\t\t - %s -> %s our hash %s does not match %s" % (FAIL, filename, hash.upper(), crc.upper()))
+                missing_files.append(release['release']+"/"+filename)
+
+        sfv.close()
+        release_list[release['release']]['rescene'] = True
 
     if os.path.basename(doutput.lower()).lower() != release['release'].lower():
         #output dir is not specific to rls/doesnt match release
