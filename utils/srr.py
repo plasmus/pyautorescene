@@ -28,6 +28,7 @@ class SRR:
             matches.append(sfile)
 
         return matches
+
     # search an srr for all archived-files that match given crc
     # returns array of FileInfo's matching the crc
     def get_archived_fname_by_crc(self, crc):

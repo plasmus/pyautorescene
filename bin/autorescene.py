@@ -491,10 +491,10 @@ def check_dir(args, fpath):
         #keep track of the releases we are processing
         if not release['release'] in release_list:
             release_list[release['release']] = dict()
-            release_list[release['release']]['rescene'] = True
+            release_list[release['release']]['rescene'] = False
             release_list[release['release']]['resample'] = False
             release_list[release['release']]['extract'] = False
-        elif release_list[release['release']]['extract'] and release_list[release['release']]['resample']:
+        elif release_list[release['release']]['rescene'] and release_list[release['release']]['extract'] and release_list[release['release']]['resample']:
             verbose("\t - Skipping, already processed.")
             return True
 
@@ -513,9 +513,11 @@ def check_dir(args, fpath):
     verbose("\t - Checking if all RAR are present in %s" % (fpath))
     for match in srr_finfo:
         if not os.path.exists(os.path.join(fpath, match)):
-            verbose("%s -> Be careful missing RAR file: %s" % (FAIL, match))
+            verbose("\t\t - %s -> Be careful missing RAR file: %s" % (FAIL, match))
+            missing_files.append(release['release']+match)
         else:
-            verbose("%s -> %s" % (SUCCESS, match))
+            verbose("\t\t - %s -> %s" % (SUCCESS, match))
+            release_list[release['release']]['rescene'] = True
 
     if os.path.basename(doutput.lower()).lower() != release['release'].lower():
         #output dir is not specific to rls/doesnt match release
@@ -571,41 +573,42 @@ def check_dir(args, fpath):
 
             if srs_path != "":
                 sample = SRS(srs_path)
-                verbose("\t - Recreating Sample .. expect output from SRS\n-------------------------------")
-
-                try:
-                    sample.recreate(rar_path, os.path.dirname(srs_path))
-                except Exception as e:
-                    verbose("-------------------------------")
-                    verbose("\t - %s -> failed to recreate sample: %s." % (FAIL,e))
-
-                    #sample reconstruction failed.. should we try check local disk for a sample?
-                    if args['find_sample']:
-                        verbose("\t - Searching for sample on local disk")
-                        sample_file = find_file(os.path.dirname(fpath), sample.get_filename(), sample.get_crc())
-                        if sample_file:
-                            verbose("\t\t - %s - Found sample -> %s" % (SUCCESS, sample_file))
-                            try:
-                                print(sample_file)
-                                print(os.path.dirname(srs_path))
-                                copy_file(sample_file, os.path.dirname(srs_path))
-                                release_list[release['release']]['resample'] = True
-                            except Exception as e:
-                                verbose("\t\t - %s - Could not copy file to %s -> %s" % (FAIL, os.path.dirname(srs_path), e))
-                                missing_files.append(release['release']+"/Sample/"+sample.get_filename())
-                        else:
-                            missing_files.append(release['release']+"/Sample/"+sample.get_filename())
-                    else:
+                #we try check if sample on local disk is good
+                verbose("\t - Searching for sample on local disk")
+                sample_file = find_file(os.path.dirname(fpath), sample.get_filename(), sample.get_crc())
+                if sample_file:
+                    verbose("\t\t - %s - Found sample -> %s" % (SUCCESS, sample_file))
+                    try:
+                        copy_file(sample_file, os.path.dirname(srs_path))
+                        release_list[release['release']]['resample'] = True
+                        if not args['keep_srs']:
+                            if os.path.exists(srs_path):
+                                os.remove(srs_path)
+                            else:
+                                verbose("\t - Impossible to delete no SRS found %s" % (FAIL))
+                    except Exception as e:
+                        verbose("\t\t - %s - Could not copy file to %s -> %s" % (FAIL, os.path.dirname(srs_path), e))
                         missing_files.append(release['release']+"/Sample/"+sample.get_filename())
                 else:
-                    verbose("-------------------------------")
-                    verbose("\t - %s -> sample recreated successfully" % (SUCCESS))
-                    release_list[release['release']]['resample'] = True
-                    if not args['keep_srs']:
-                        if os.path.exists(srs_path):
-                            os.remove(srs_path)
-                        else:
-                            verbose("\t - Impossible to delete no SRS found %s" % (FAIL))
+                    #we try sample reconstruction
+                    verbose("\t - Sample found have Bad CRC or no sample foud %s" % (FAIL))
+                    verbose("\t - Recreating Sample .. expect output from SRS\n-------------------------------")
+                    try:
+                        sample.recreate(rar_path, os.path.dirname(srs_path))
+                    except Exception as e:
+                        verbose("-------------------------------")
+                        verbose("\t - %s -> failed to recreate sample: %s." % (FAIL,e))
+                        missing_files.append(release['release']+"/Sample/"+sample.get_filename())
+
+                    else:
+                        verbose("-------------------------------")
+                        verbose("\t - %s -> sample recreated successfully" % (SUCCESS))
+                        release_list[release['release']]['resample'] = True
+                        if not args['keep_srs']:
+                            if os.path.exists(srs_path):
+                                os.remove(srs_path)
+                            else:
+                                verbose("\t - Impossible to delete no SRS found %s" % (FAIL))
             else:
                 missing_files.append(release['release']+"/Sample/"+sample.get_filename())
         else:
