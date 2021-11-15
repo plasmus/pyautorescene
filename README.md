@@ -64,3 +64,7 @@ optional arguments:
   --keep-srr            keep srr in output directory
   --keep-srs            keep srs in output directory
 ```
+
+To Do
+-----
+Add Subs reconstruction/check
