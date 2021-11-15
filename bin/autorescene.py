@@ -403,6 +403,7 @@ def check_file(args, fpath):
         try:
             if release_srr.get_is_compressed():
                 verbose("\n\t - WARNING ! RAR Compression is used, reconstruction may not work", end="")
+
             release_srr.reconstruct_rars(os.path.dirname(fpath), doutput, rename_hints, rar_version, srr_temp_foder)
         except Exception as e:
             verbose("%s -> %s" % (FAIL, e))
@@ -517,53 +518,65 @@ def check_dir(args, fpath):
     release_srr = SRR(srr_path)
     srr_finfo = release_srr.get_rars_name()
     if not args['check_crc']:
-        verbose("\t - Checking if all RAR are present in %s" % (fpath))
-        for match in srr_finfo:
-            if not os.path.exists(os.path.join(fpath, match)):
-                verbose("\t\t - %s -> Be careful missing RAR file: %s" % (FAIL, match))
-                missing_files.append(release['release']+"/"+match)
-            else:
-                verbose("\t\t - %s -> %s" % (SUCCESS, match))
+        if len(srr_finfo) > 0:
+            verbose("\t - Checking if all RAR are present in %s" % (fpath))
+            for match in srr_finfo:
+                if not os.path.exists(os.path.join(fpath, os.path.normpath(match))):
+                    verbose("\t\t - %s -> Be careful missing RAR file: %s" % (FAIL, match))
+                    missing_files.append(release['release']+"/"+os.path.normpath(match))
+                else:
+                    verbose("\t\t - %s -> %s" % (SUCCESS, match))
 
-        release_list[release['release']]['rescene'] = True
+            release_list[release['release']]['rescene'] = True
+        else:
+            verbose("\t - Checking if all files are present in %s" % (fpath))
+            srr_sfv_info = release_srr.get_sfv_entries_name()
+            for match in srr_sfv_info:
+                if not os.path.exists(os.path.join(fpath, match)):
+                    verbose("\t\t - %s -> Be careful missing file: %s" % (FAIL, match))
+                    missing_files.append(release['release']+"/"+match)
+                else:
+                    verbose("\t\t - %s -> %s" % (SUCCESS, match))
+
+            release_list[release['release']]['rescene'] = True
 
     elif args['check_crc']:
-        verbose("\t - Checking if all RAR have good CRC in %s" % (fpath))
-        for fname in os.listdir(fpath):
+        stored_files = release_srr.get_stored_files_name()
+        sfv_path = []
+        for fname in stored_files:
             if fname.endswith(".sfv"):
-                sfv_path = os.path.join(fpath, fname)
+                sfv_path.append(os.path.join(fpath, os.path.normpath(fname)))
 
-        try:
-            sfv = open(sfv_path, "r")
-        except Exception as e:
-            verbose("\t\t - %s - Could not open sfv file %s -> %s" % (FAIL, sfv_path, e))
+        verbose("\t - Checking if all RAR have good CRC in %s" % (fpath))
+        for sfv in sfv_path:
+            try:
+                sfv_f = open(sfv, "r")
+                sfv_p = os.path.dirname(sfv)
+            except Exception as e:
+                verbose("\t\t - %s - Could not open sfv file %s -> %s" % (FAIL, sfv, e))
 
-        good = bad = miss = 0
-        for line in sfv:
-            # Skip comments.
-            if line[0] == ';': continue
+            for line in sfv_f:
+                # Skip comments.
+                if line[0] == ';': continue
 
-            filename, _, crc = line.rstrip().rpartition(' ')
+                filename, _, crc = line.rstrip().rpartition(' ')
 
-            if not (filename and crc): continue
+                if not (filename and crc): continue
 
-            if not os.path.exists(os.path.join(fpath, filename)):
-                miss += 1
-                verbose("\t\t - %s -> Be careful missing RAR file: %s" % (FAIL, filename))
-                missing_files.append(release['release']+"/"+filename)
+                if not os.path.exists(os.path.join(fpath, os.path.join(sfv_p, filename))):
+                    verbose("\t\t - %s -> Be careful missing RAR file: %s" % (FAIL, filename))
+                    missing_files.append(os.path.join(fpath, os.path.join(sfv_p, filename)))
 
-                continue
+                    continue
 
-            hash = calc_crc(os.path.join(fpath, filename))
-            if hash.lower() == crc.lower():
-                good += 1
-                verbose("\t\t - %s -> %s %s" % (SUCCESS, filename, hash.upper()))
-            else:
-                bad += 1
-                verbose("\t\t - %s -> %s our hash %s does not match %s" % (FAIL, filename, hash.upper(), crc.upper()))
-                missing_files.append(release['release']+"/"+filename)
+                hash = calc_crc(os.path.join(fpath, os.path.join(sfv_p, filename)))
+                if hash.lower() == crc.lower():
+                    verbose("\t\t - %s -> %s %s" % (SUCCESS, filename, hash.upper()))
+                else:
+                    verbose("\t\t - %s -> %s our hash %s does not match %s" % (FAIL, filename, hash.upper(), crc.upper()))
+                    missing_files.append(os.path.join(fpath, os.path.join(sfv_p, filename)))
 
-        sfv.close()
+            sfv_f.close()
         release_list[release['release']]['rescene'] = True
 
     if os.path.basename(doutput.lower()).lower() != release['release'].lower():
@@ -583,11 +596,14 @@ def check_dir(args, fpath):
 
     if (args['check_extras']) and not release_list[release['release']]['extract']:
         verbose("\t - Extracting stored files from SRR", end="")
-        for fname in os.listdir(fpath):
-            if fname.endswith(".part01.rar") or fname.endswith(".rar"):
-                rar_path = os.path.join(fpath, fname)
+        if len(srr_finfo) > 0:
+            rar_path = os.path.join(fpath, srr_finfo[0])
+
         try:
-            matches = release_srr.extract_stored_files_regex(doutput)
+            if len(srr_finfo) > 0:
+                matches = release_srr.extract_stored_files_regex(doutput)
+            else:
+                matches = release_srr.extract_stored_files_regex(doutput, regex="^(?:(.+\.)((?!srs$)[^.]*)|[^.]+)$")
 
         except Exception as e:
             verbose("%s -> %s" % (FAIL, e))
@@ -604,7 +620,7 @@ def check_dir(args, fpath):
             release_list[release['release']]['extract'] = True
 
     if (args['check_extras']) and not release_list[release['release']]['resample']:
-        if release['hasSRS'] == "yes":
+        if release['hasSRS'] == "yes" and len(srr_finfo) > 0:
             try:
                 srs_path
             except NameError:

@@ -19,9 +19,11 @@ class SRR:
             else:
                 self.binary = binary
 
+    # check if compression method is used for RAR file
     def get_is_compressed(self):
         if info(self.filename)['compression']:
             return True
+
     # search an srr for all rar-files presents
     # returns array of FileInfo's
     def get_rars_name(self):
@@ -29,6 +31,27 @@ class SRR:
 
         for sfile in info(self.filename)['rar_files'].keys():
             matches.append(sfile)
+
+        return matches
+
+    # search an srr for all non RAR files presents in all sfv file
+    # returns array of FileInfo's
+    def get_sfv_entries_name(self):
+        matches = []
+
+        for sfile in info(self.filename)['sfv_entries']:
+            matches += (str(sfile).split())
+
+        return matches[::2]
+
+    # search an srr for all files presents in srr
+    # returns array of FileInfo's
+    def get_stored_files_name(self):
+        matches = []
+
+        for sfile in info(self.filename)['stored_files'].keys():
+            if not sfile.endswith(".srs"):
+                matches.append(sfile)
 
         return matches
 
