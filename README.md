@@ -6,7 +6,7 @@ pyautorescene
 =============
 pyautorescene automates the process of returning un-rarred scene releases back into their former glory.  It makes use of [PyReScene](https://github.com/srrDB/pyrescene) and [srrDB](http://srrdb.com) to make the whole process has hands off as possible. 
 With this fork, it is possible to log in your srrdb account to bypass the daily download limit of srr.
-Now it is also possible to add only nfo/sfv/Sample/Proof if you already have releases in scene format but no longer the unrarred .mkv.
+Now it is also possible to add only nfo/sfv/Sample/Proof/Subs if you already have releases in scene format but no longer the unrarred .mkv.
 
 Requirements
 ------------
@@ -27,7 +27,7 @@ Currently, the best and most tested method of executing this script is `autoresc
 It is **seriously** recommended to output to a completely separate folder that you're happy to delete.
 
 
-If you already have releases in scene format but no longer the unrarred .mkv and you want to search against srrdb if you have missing files like nfo/sfv/Sample/Proof do `autorescene.py -vc /path/to/input`
+If you already have releases in scene format but no longer the unrarred .mkv and you want to search against srrdb if you have missing files like nfo/sfv/Sample/Proof/Subs do `autorescene.py -vc /path/to/input`
 
 ```
 stick$ autorescene.py --help
@@ -48,6 +48,7 @@ optional arguments:
   -j, --rescene         recreate rars from extracted file/srr
   -k, --resample        recreate sample from original file/srs
   -f, --find-sample     if sample creation fails, look for sample file on disk
+  -g, --resubs          look for sub rar if file is missing
   -o OUTPUT, --output OUTPUT
                         set the directory for all output
   -v, --verbose         verbose output for debugging purposes
@@ -67,4 +68,4 @@ optional arguments:
 
 To Do
 -----
-Add Subs reconstruction/check
+Make a better code for Subs reconstruction/check -> Working but little bugged, I'm not sure that will work with all subbed releases.
