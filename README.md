@@ -60,10 +60,7 @@ optional arguments:
   -c, --check-extras    check missing Sample/Proof, this will scan directories, 
                         check srrdb, and add into a release dir with original rars 
                         nfo/sfv/proof and recreate sample
+  --check-crc           check crc in sfv file when using --check-extras
   --keep-srr            keep srr in output directory
   --keep-srs            keep srs in output directory
 ```
-
-To Do
------
-Add an option feature to check if all the .rars presents in the releases directory have the correct CRC before adding Sample/Proof/etc
