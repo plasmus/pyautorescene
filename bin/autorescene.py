@@ -21,6 +21,7 @@ FAIL = Fore.RED + "  [FAIL] " + Fore.RESET
 #list of processes releases
 release_list = dict()
 missing_files = []
+compressed_release = []
 
 username = ""
 password = ""
@@ -346,7 +347,7 @@ def check_file(args, fpath):
 
     release_srr = SRR(srr_path)
     srr_finfo = release_srr.get_archived_fname_by_crc(release_crc)
-
+    srr_compress_info = release_srr.get_is_compressed()
     if os.path.basename(doutput.lower()).lower() != release['release'].lower():
         #output dir is not specific to rls/doesnt match release
         doutput = os.path.join(doutput, release['release'])
@@ -400,10 +401,13 @@ def check_file(args, fpath):
 
         rename_hints = {srr_finfo[0].file_name: os.path.basename(fpath)}
         try:
+            if release_srr.get_is_compressed():
+                verbose("\n\t - WARNING ! RAR Compression is used, reconstruction may not work", end="")
             release_srr.reconstruct_rars(os.path.dirname(fpath), doutput, rename_hints, rar_version, srr_temp_foder)
         except Exception as e:
             verbose("%s -> %s" % (FAIL, e))
-
+            if release_srr.get_is_compressed():
+                compressed_release.append(release['release'])
         else:
             verbose("%s" % (SUCCESS))
             release_list[release['release']]['rescene'] = True
@@ -710,3 +714,7 @@ if __name__ == "__main__":
     if len(missing_files) > 0:
         print("Rescene process complete, the following files need to be manually aquired:")
         print(*missing_files, sep='\n')
+
+    if len(compressed_release) > 0:
+        print("Rescene process complete, the following files were compressed and need to be manually aquired:")
+        print(*compressed_release, sep='\n')

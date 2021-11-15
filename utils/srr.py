@@ -19,6 +19,9 @@ class SRR:
             else:
                 self.binary = binary
 
+    def get_is_compressed(self):
+        if info(self.filename)['compression']:
+            return True
     # search an srr for all rar-files presents
     # returns array of FileInfo's
     def get_rars_name(self):
