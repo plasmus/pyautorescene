@@ -34,6 +34,14 @@ class SRR:
 
         return matches
 
+    def get_rar_crc(self):
+        matches = []
+
+        for sfile in info(self.filename)['rar_files'].values():
+            matches.append(sfile.crc32)
+
+        return matches
+
     # search an srr for all non RAR files presents in all sfv file
     # returns array of FileInfo's
     def get_sfv_entries_name(self):
@@ -55,6 +63,13 @@ class SRR:
 
         return matches
 
+    def get_archived_fname(self):
+        matches = []
+
+        for sfile, value in info(self.filename)['archived_files'].items():
+            matches.append(sfile)
+
+        return matches
     # search an srr for all archived-files that match given crc
     # returns array of FileInfo's matching the crc
     def get_archived_fname_by_crc(self, crc):
