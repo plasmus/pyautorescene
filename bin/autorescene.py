@@ -397,7 +397,7 @@ def check_file(args, fpath):
 
             release_list[release['release']]['extract'] = True
             if not os.path.exists(os.path.join(doutput, "Subs")):
-                release_list[release['resubs']]['extract'] = True
+                release_list[release['release']]['resubs'] = True
 
     if (args['rescene'] or args['auto_reconstruct']) and not release_list[release['release']]['rescene']:
         verbose("\t - Reconstructing original RARs from SRR", end="")
@@ -783,7 +783,7 @@ def check_dir(args, fpath):
                 verbose("\t\t - %s" % os.path.relpath(match[0], doutput))
             release_list[release['release']]['extract'] = True
             if not os.path.exists(os.path.join(doutput, "Subs")):
-                release_list[release['resubs']]['extract'] = True
+                release_list[release['release']]['resubs'] = True
 
     if (args['check_extras']) and not release_list[release['release']]['resample']:
         if release['hasSRS'] == "yes" and len(srr_finfo) > 0:
