@@ -29,8 +29,8 @@ class SRR:
     def get_rars_name(self):
         matches = []
 
-        for sfile in info(self.filename)['rar_files'].keys():
-            matches.append(sfile)
+        for sfile in info(self.filename)['rar_files'].values():
+            matches.append(sfile.file_name)
 
         return matches
 
