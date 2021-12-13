@@ -383,7 +383,7 @@ def check_file(args, fpath):
     if (args['extract_stored'] or args['auto_reconstruct']) and not release_list[release['release']]['extract']:
         verbose("\t - Extracting stored files from SRR", end="")
         try:
-            matches = release_srr.extract_stored_files_regex(doutput)
+            matches = release_srr.extract_stored_files_regex(doutput, regex="^(?:(.+\.)((?!txt$)[^.]*)|[^.]+)$")
 
         except Exception as e:
             verbose("%s -> %s" % (FAIL, e))
@@ -452,9 +452,7 @@ def check_file(args, fpath):
                         if sample_file:
                             verbose("\t\t - %s - Found sample -> %s" % (SUCCESS, sample_file))
                             try:
-                                print(sample_file)
-                                print(os.path.dirname(srs_path))
-                                copy_file(sample_file, os.path.dirname(srs_path))
+                                shutil.move(sample_file, os.path.dirname(srs_path))
                                 release_list[release['release']]['resample'] = True
                             except Exception as e:
                                 verbose("\t\t - %s - Could not copy file to %s -> %s" % (FAIL, os.path.dirname(srs_path), e))
@@ -482,6 +480,7 @@ def check_file(args, fpath):
         sub_file = ""
         idx_file = ""
         sub_srr_2 = ""
+        rar_name = ""
         rar_name_2 = ""
         for root, dirs, files in os.walk(os.path.join(doutput, "Subs")):
             for file in files:
@@ -587,13 +586,11 @@ def check_file(args, fpath):
             if not os.path.exists(os.path.join(fpath, os.path.join(sfv_p, filename))):
                 verbose("\t\t - %s -> Be careful missing Subs file: %s" % (FAIL, filename))
                 verbose("\t - Searching for Subs on local disk")
-                subs_file = find_file(os.path.dirname(fpath), rar_name, crc)
+                subs_file = find_file(os.path.dirname(fpath), filename, crc.upper())
                 if subs_file:
                     verbose("\t\t - %s - Found Subs -> %s" % (SUCCESS, subs_file))
                     try:
-                        print(subs_file)
-                        print(os.path.dirname(subs_file))
-                        copy_file(subs_file, os.path.dirname(sub_srr))
+                        shutil.move(subs_file, os.path.dirname(sub_srr))
                         release_list[release['release']]['resubs'] = True
                         if not args['keep_srr']:
                             if os.path.exists(sub_srr):
@@ -617,13 +614,11 @@ def check_file(args, fpath):
             else:
                 verbose("\t\t - %s -> %s our hash %s does not match %s" % (FAIL, filename, hash.upper(), crc.upper()))
                 verbose("\t - Searching for Subs on local disk")
-                subs_file = find_file(os.path.dirname(fpath), rar_name, crc)
+                subs_file = find_file(os.path.dirname(fpath), filename, crc.upper())
                 if subs_file:
                     verbose("\t\t - %s - Found Subs -> %s" % (SUCCESS, subs_file))
                     try:
-                        print(subs_file)
-                        print(os.path.dirname(subs_file))
-                        copy_file(subs_file, os.path.dirname(sub_srr))
+                        shutil.move(subs_file, os.path.dirname(sub_srr))
                         release_list[release['release']]['resubs'] = True
                         if not args['keep_srr']:
                             if os.path.exists(os.path.join(os.path.dirname(sub_srr), rar_name_2)):
@@ -794,7 +789,7 @@ def check_dir(args, fpath):
 
         try:
             if len(srr_finfo) > 0:
-                matches = release_srr.extract_stored_files_regex(doutput)
+                matches = release_srr.extract_stored_files_regex(doutput, regex="^(?:(.+\.)((?!txt$)[^.]*)|[^.]+)$")
             else:
                 matches = release_srr.extract_stored_files_regex(doutput, regex="^(?:(.+\.)((?!srs$)[^.]*)|[^.]+)$")
 
@@ -852,17 +847,25 @@ def check_dir(args, fpath):
                 sample_file = find_file(os.path.dirname(fpath), sample.get_filename(), sample.get_crc())
                 if sample_file:
                     verbose("\t\t - %s - Found sample -> %s" % (SUCCESS, sample_file))
-                    try:
-                        copy_file(sample_file, os.path.dirname(srs_path))
-                        release_list[release['release']]['resample'] = True
-                        if not args['keep_srs']:
-                            if os.path.exists(srs_path):
-                                os.remove(srs_path)
-                            else:
-                                verbose("\t - Impossible to delete no SRS found %s" % (FAIL))
-                    except Exception as e:
-                        verbose("\t\t - %s - Could not copy file to %s -> %s" % (FAIL, os.path.dirname(srs_path), e))
-                        missing_files.append(release['release']+"/Sample/"+sample.get_filename())
+                    if os.path.dirname(sample_file.lower()) != os.path.dirname(srs_path.lower()):
+                        try:
+                            shutil.move(sample_file, os.path.dirname(srs_path))
+                            release_list[release['release']]['resample'] = True
+                            if not args['keep_srs']:
+                                if os.path.exists(srs_path):
+                                    os.remove(srs_path)
+                                else:
+                                    verbose("\t - Impossible to delete no SRS found %s" % (FAIL))
+                        except Exception as e:
+                            verbose("\t\t - %s - Could not copy file to %s -> %s" % (FAIL, os.path.dirname(srs_path), e))
+                            missing_files.append(release['release']+"/Sample/"+sample.get_filename())
+                    
+                    release_list[release['release']]['resample'] = True
+                    if not args['keep_srs']:
+                        if os.path.exists(srs_path):
+                            os.remove(srs_path)
+                        else:
+                            verbose("\t - Impossible to delete no SRS found %s" % (FAIL))
                 else:
                     #we try sample reconstruction
                     verbose("\t - Sample found have Bad CRC or no sample foud %s" % (FAIL))
@@ -893,6 +896,7 @@ def check_dir(args, fpath):
         sub_file = ""
         idx_file = ""
         sub_srr_2 = ""
+        rar_name = ""
         rar_name_2 = ""
         for root, dirs, files in os.walk(os.path.join(doutput, "Subs")):
             for file in files:
@@ -998,13 +1002,11 @@ def check_dir(args, fpath):
             if not os.path.exists(os.path.join(fpath, os.path.join(sfv_p, filename))):
                 verbose("\t\t - %s -> Be careful missing Subs file: %s" % (FAIL, filename))
                 verbose("\t - Searching for Subs on local disk")
-                subs_file = find_file(os.path.dirname(fpath), rar_name, crc)
+                subs_file = find_file(os.path.dirname(fpath), filename, crc.upper())
                 if subs_file:
                     verbose("\t\t - %s - Found Subs -> %s" % (SUCCESS, subs_file))
                     try:
-                        print(subs_file)
-                        print(os.path.dirname(subs_file))
-                        copy_file(subs_file, os.path.dirname(sub_srr))
+                        shutil.move(subs_file, os.path.dirname(sub_srr))
                         release_list[release['release']]['resubs'] = True
                         if not args['keep_srr']:
                             if os.path.exists(sub_srr):
@@ -1028,13 +1030,11 @@ def check_dir(args, fpath):
             else:
                 verbose("\t\t - %s -> %s our hash %s does not match %s" % (FAIL, filename, hash.upper(), crc.upper()))
                 verbose("\t - Searching for Subs on local disk")
-                subs_file = find_file(os.path.dirname(fpath), rar_name, crc)
+                subs_file = find_file(os.path.dirname(fpath), filename, crc.upper())
                 if subs_file:
                     verbose("\t\t - %s - Found Subs -> %s" % (SUCCESS, subs_file))
                     try:
-                        print(subs_file)
-                        print(os.path.dirname(subs_file))
-                        copy_file(subs_file, os.path.dirname(sub_srr))
+                        shutil.move(subs_file, os.path.dirname(sub_srr))
                         release_list[release['release']]['resubs'] = True
                         if not args['keep_srr']:
                             if os.path.exists(os.path.join(os.path.dirname(sub_srr), rar_name_2)):
