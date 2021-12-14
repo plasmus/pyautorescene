@@ -299,6 +299,9 @@ def search_srrdb_dirname(rlspath):
     return release
 
 def check_file(args, fpath):
+    spath = os.path.split(fpath)
+    if os.path.basename(spath[0].lower()) == "Sample".lower():
+        return False
     if not os.path.splitext(fpath)[1] in args['extension']:
         return False
     if args['min_filesize'] and os.path.getsize(fpath) < args['min_filesize']:
