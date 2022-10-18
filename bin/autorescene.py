@@ -26,8 +26,8 @@ compressed_release = []
 username = ""
 password = ""
 site = "https://www.srrdb.com/"
-srrdb_api = "http://www.srrdb.com/api/search/"
-srrdb_download = "http://www.srrdb.com/download/srr/"
+srrdb_api = "https://www.srrdb.com/api/search/"
+srrdb_download = "https://www.srrdb.com/download/srr/"
 rar_version = "C:\\Python39\\pyrescene-master\\rarv"
 srr_temp_foder = "F:\\tmp"
 

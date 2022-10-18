@@ -4,6 +4,7 @@ import os
 import tempfile
 from urllib.parse import urlparse
 import requests
+from requests.adapters import HTTPAdapter, Retry
 
 class SRRDB_LOGIN:
     """
@@ -46,6 +47,10 @@ class SRRDB_LOGIN:
         self.userAgent = userAgent
         self.loginTestString = loginTestString
         self.debug = debug
+        self.retries = Retry(total=5,
+                backoff_factor=0.5,
+                status_forcelist=[ 500, 502, 503, 504 ]
+            )
 
         self.login(forceLogin, **kwargs)
 
@@ -71,6 +76,9 @@ class SRRDB_LOGIN:
         if not wasReadFromCache:
             self.session = requests.Session()
             self.session.headers.update({"user-agent" : self.userAgent})
+
+            self.session.mount('https://', HTTPAdapter(max_retries=self.retries))
+
             res = self.session.post(self.loginUrl, data = self.loginData, proxies = self.proxies, **kwargs)
 
             if self.debug:
