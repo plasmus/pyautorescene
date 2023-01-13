@@ -16,7 +16,7 @@ Installation
 ------------
 1. Clone this repository to your local machine
 2. Via terminal/command prompt navigate to the folder
-3. Edit `bin/autorescene.py`, fill `username/password` to login your srrdb account, 
+3. Edit `utils/res.py`, fill `username/password` to login your srrdb account, 
 4. Fill `rar_version` with the path that you have the WinRAR executables (you must run `preprardir.py` before) and fill `srr_temp_foder` who is just a temp folder for the recompressing process. (**Doesn't work under linux...**)
 5. Run `python setup.py install`
 
