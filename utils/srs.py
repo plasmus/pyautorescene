@@ -1,4 +1,4 @@
-import os,re
+import os, re
 from resample.srs import main as srsmain
 from resample.main import file_type_info, FileType, sample_class_factory
 
@@ -35,6 +35,9 @@ class SRS:
 
     def get_filename(self):
         return self.srs_data.name
+
+    def get_filesize(self):
+        return self.srs_data.size
 
     def get_crc(self):
         return "%08X"%(self.srs_data.crc32 & 0xFFFFFFFF)

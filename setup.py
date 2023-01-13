@@ -3,11 +3,11 @@ from setuptools import setup, find_packages
 
 setup(
     name='pyresceneauto',
-    version='0.0.5',
+    version='1.0',
     description='Effortlessly turn extracted scene releases back into their original glory with the aid of pyRescene and srrdb.com',
-    author='stick',
+    author='jaloji',
     license='WTFPL',
-    url='https://bitbucket.org/sticki/pyautorescene',
+    url='https://github.com/jaloji/pyautorescene',
     packages=find_packages(),
     scripts=['bin/autorescene.py'],
 

@@ -2,7 +2,7 @@
 
 from __future__ import print_function
 import argparse, os, sys, errno
-from colorama import Fore, init
+from colorama import init
 import shutil
 import zlib
 import json
@@ -14,22 +14,12 @@ from utils.connect import SRRDB_LOGIN
 from utils.srr import SRR
 from utils.srs import SRS
 from rescene.osohash import compute_hash, osohash_from
-
-SUCCESS = Fore.GREEN + "  [SUCCESS] " + Fore.RESET
-FAIL = Fore.RED + "  [FAIL] " + Fore.RESET
+import utils.res
 
 #list of processes releases
 release_list = dict()
 missing_files = []
 compressed_release = []
-
-username = ""
-password = ""
-site = "https://www.srrdb.com/"
-srrdb_api = "https://www.srrdb.com/api/search/"
-srrdb_download = "https://www.srrdb.com/download/srr/"
-rar_version = "C:\\Python39\\pyrescene-master\\rarv"
-srr_temp_foder = "F:\\tmp"
 
 def arg_parse():
     parser = argparse.ArgumentParser(
@@ -83,30 +73,10 @@ def search_by_crc(crc):
         #crc must have 8 characters
         raise ValueError("CRC must have length of 8")
 
-    crc_search = srrdb_api + "archive-crc:" + crc
+    crc_search = utils.res.srrdb_api + "archive-crc:" + crc
 
     try:
         response = s.retrieveContent(crc_search)
-        data = response.json()
-    except:
-        raise
-
-    if 'resultsCount' not in data or int(data['resultsCount']) < 1:
-        return None
-
-    return data['results']
-
-def search_by_name(name, isdir = False):
-    if not name or name == "":
-        raise ValueError("Release must have a valid name")
-
-    if not isdir:
-        name_search = srrdb_api + "r:" + name.rsplit( ".", 1 )[ 0 ]
-    else:
-        name_search = srrdb_api + "r:" + name
-
-    try:
-        response = s.retrieveContent(name_search)
         data = response.json()
     except:
         raise
@@ -120,7 +90,7 @@ def search_by_oso(hashfile):
     if not hashfile or hashfile == "":
         raise ValueError("Release must have a valid OSO hash")
 
-    name_search = srrdb_api + "isdbhash:" + hashfile
+    name_search = utils.res.srrdb_api + "isdbhash:" + hashfile
 
     try:
         response = s.retrieveContent(name_search)
@@ -132,41 +102,6 @@ def search_by_oso(hashfile):
         return None
 
     return data['results']
-
-def download_srr(rls, path=None):
-    if not rls or rls == "":
-        raise ValueError("Release must have a valid name")
-
-    srr_download = srrdb_download + rls
-
-    if not path or path == "":
-        path = tempfile.gettempdir()
-
-    if not os.path.isdir(path):
-        raise IOError("Output directory \"", path, "\" does not exist.")
-
-    #create path for file to be stored
-    path = os.path.join(path, os.path.basename(srr_download + ".srr"))
-
-    try:
-        response = s.retrieveContent(srr_download)
-
-        if response.text == "The SRR file does not exist.":
-            return (False, "Release does not exist on srrdb.com")
-
-        if response.text == "You've reached your daily download limit.":
-            time.sleep(5)
-            response = s.retrieveContent(srr_download)
-
-        with open(path, "wb") as local_file:
-            for chunk in response.iter_content(chunk_size=1024):
-                if chunk:
-                    local_file.write(chunk)
-                    local_file.flush()
-    except:
-        raise
-
-    return path
 
 def calc_crc(fpath):
     if not os.path.isfile(fpath):
@@ -200,17 +135,6 @@ def copy_file(finput, foutput):
 
     return True
 
-def mkdir(path):
-    try:
-        os.makedirs(path)
-    except OSError as e:
-        if e.errno == errno.EEXIST and os.path.isdir(path):
-            return True
-        else:
-            raise OSError(e)
-    else:
-        return True
-
 def find_file(startdir, fname, fcrc):
     if not os.path.isdir(startdir):
         raise ValueError("startdir must be a directory")
@@ -229,47 +153,47 @@ def search_srrdb_crc(crc, rlspath):
     try:
         results = search_by_crc(crc)
     except Exception as e:
-        verbose("%s -> %s" % (FAIL, e))
+        verbose("%s -> %s" % (utils.res.FAIL, e))
         return False
 
     if not results:
-        verbose("%s -> %s" % (FAIL, "No matching results"))
+        verbose("%s -> %s" % (utils.res.FAIL, "No matching results"))
         return False
     else:
-        verbose("%s" % SUCCESS)
+        verbose("%s" % utils.res.SUCCESS)
 
     #handle multiple releases having same crc32 
     # (this should only happen with dupe srr's being uploaded)
     if len(results) > 1:
-        verbose("\t\t %s More than one release found matching CRC %s." % (FAIL, crc))
+        verbose("\t\t %s More than one release found matching CRC %s." % (utils.res.FAIL, crc))
         verbose("\t - Searching srrdb.com for matching release name", end="")
         try:
             rlsname = os.path.basename(rlspath)
-            results = search_by_name(rlsname, isdir = False)
+            results = utils.res.search_by_name(rlsname, s, isdir = False)
         except Exception as e:
-            verbose("%s -> %s" % (FAIL, e))
+            verbose("%s -> %s" % (utils.res.FAIL, e))
             return False
 
         if not results or len(results) > 1:
-            verbose("%s -> %s" % (FAIL, "No matching results"))
+            verbose("%s -> %s" % (utils.res.FAIL, "No matching results"))
             verbose("\t - Searching srrdb.com for matching OSO hash", end="")
             try:
                 OSOhash = calc_oso(rlspath)
                 results = search_by_oso(OSOhash)
             except Exception as e:
-                verbose("%s -> %s" % (FAIL, e))
+                verbose("%s -> %s" % (utils.res.FAIL, e))
                 return False
 
             if not results:
-                verbose("%s -> %s" % (FAIL, "No matching results"))
+                verbose("%s -> %s" % (utils.res.FAIL, "No matching results"))
                 return False
             else:
-                verbose("%s" % SUCCESS)
+                verbose("%s" % utils.res.SUCCESS)
         else:
-            verbose("%s" % SUCCESS)
+            verbose("%s" % utils.res.SUCCESS)
 
     if len(results) > 1:
-        verbose("\t\t %s More than one release found matching OSO hash %s. This is most likely an issue, please report it on IRC (#srrdb @ irc.efnet.net)." % (FAIL, OSOhash))
+        verbose("\t\t %s More than one release found matching OSO hash %s. This is most likely an issue, please report it on IRC (#srrdb @ irc.efnet.net)." % (utils.res.FAIL, OSOhash))
         return False
 
     release = results[0]
@@ -282,16 +206,16 @@ def search_srrdb_dirname(rlspath):
     verbose("\t - Searching srrdb.com for matching release name", end="")
     try:
         rlsname = os.path.basename(rlspath)
-        results = search_by_name(rlsname, isdir = True)
+        results = utils.res.search_by_name(rlsname, s, isdir = True)
     except Exception as e:
-        verbose("%s -> %s" % (FAIL, e))
+        verbose("%s -> %s" % (utils.res.FAIL, e))
         return False
 
     if not results or len(results) > 1:
-        verbose("%s -> %s" % (FAIL, "No matching results"))
+        verbose("%s -> %s" % (utils.res.FAIL, "No matching results"))
         return False
     else:
-        verbose("%s" % SUCCESS)
+        verbose("%s" % utils.res.SUCCESS)
 
     release = results[0]
     verbose("\t\t - Matched release: %s" % release['release'])
@@ -322,10 +246,10 @@ def check_file(args, fpath):
 
     release_crc = calc_crc(fpath)
     if not release_crc:
-        verbose("%s" % (FAIL))
+        verbose("%s" % (utils.res.FAIL))
         return False
     else:
-        verbose("%s -> %s" % (SUCCESS, release_crc))
+        verbose("%s -> %s" % (utils.res.SUCCESS, release_crc))
 
     release = search_srrdb_crc(release_crc, fpath)
     if not release:
@@ -345,12 +269,12 @@ def check_file(args, fpath):
     verbose("\t - Downloading SRR from srrdb.com", end="")
     # download srr
     try:
-        srr_path = download_srr(release['release'])
+        srr_path = utils.res.download_srr(release['release'], s)
     except Exception as e:
-        verbose("%s -> %s" % (FAIL, e))
+        verbose("%s -> %s" % (utils.res.FAIL, e))
         return False
     else:
-        verbose("%s" % SUCCESS)
+        verbose("%s" % utils.res.SUCCESS)
 
     release_srr = SRR(srr_path)
     srr_finfo = release_srr.get_archived_fname_by_crc(release_crc)
@@ -360,12 +284,12 @@ def check_file(args, fpath):
         if not os.path.isdir(doutput):
             verbose("\t - Creating output directory: %s" % (doutput), end="")
             try:
-                mkdir(doutput)
+                utils.res.mkdir(doutput)
             except Exception as e:
-                verbose("%s -> Unable to create directory: %s" % (FAIL, e))
+                verbose("%s -> Unable to create directory: %s" % (utils.res.FAIL, e))
                 return False
             else:
-                verbose("%s" % (SUCCESS))
+                verbose("%s" % (utils.res.SUCCESS))
 
     verbose("\t - Setting output directory to: %s" % doutput)
 
@@ -379,9 +303,9 @@ def check_file(args, fpath):
             (ret, mesg) = copy_file(fpath, os.path.join(doutput, srr_finfo[0].file_name))
 
             if not ret:
-                verbose("%s -> %s", (FAIL, mesg))
+                verbose("%s -> %s", (utils.res.FAIL, mesg))
             else:
-                verbose("%s" % (SUCCESS))
+                verbose("%s" % (utils.res.SUCCESS))
 
     if (args['extract_stored'] or args['auto_reconstruct']) and not release_list[release['release']]['extract']:
         verbose("\t - Extracting stored files from SRR", end="")
@@ -389,11 +313,11 @@ def check_file(args, fpath):
             matches = release_srr.extract_stored_files_regex(doutput, regex="^(?:(.+\.)((?!txt$)[^.]*)|[^.]+)$")
 
         except Exception as e:
-            verbose("%s -> %s" % (FAIL, e))
+            verbose("%s -> %s" % (utils.res.FAIL, e))
             return False
 
         else:
-            verbose("%s" % SUCCESS)
+            verbose("%s" % utils.res.SUCCESS)
 
             for match in matches:
                 if match[0].endswith(".srs"):
@@ -413,13 +337,13 @@ def check_file(args, fpath):
             if release_srr.get_is_compressed():
                 verbose("\n\t - WARNING ! RAR Compression is used, reconstruction may not work", end="")
 
-            release_srr.reconstruct_rars(os.path.dirname(fpath), doutput, rename_hints, rar_version, srr_temp_foder)
+            release_srr.reconstruct_rars(os.path.dirname(fpath), doutput, rename_hints, utils.res.rar_version, utils.res.srr_temp_foder)
         except Exception as e:
-            verbose("%s -> %s" % (FAIL, e))
+            verbose("%s -> %s" % (utils.res.FAIL, e))
             if release_srr.get_is_compressed():
                 compressed_release.append(release['release'])
         else:
-            verbose("%s" % (SUCCESS))
+            verbose("%s" % (utils.res.SUCCESS))
             release_list[release['release']]['rescene'] = True
             success_release += 1
 
@@ -434,7 +358,7 @@ def check_file(args, fpath):
                 release_srs = release_srr.get_srs(doutput)
 
                 if len(release_srs) != 1:
-                    verbose("%s -> more than one SRS in this SRR.  Please reconstruct manually." % FAIL)
+                    verbose("%s -> more than one SRS in this SRR.  Please reconstruct manually." % utils.res.FAIL)
                 else:
                     srs_path = release_srs[0][0]
 
@@ -446,19 +370,19 @@ def check_file(args, fpath):
                     sample.recreate(fpath, os.path.dirname(srs_path))
                 except Exception as e:
                     verbose("-------------------------------")
-                    verbose("\t - %s -> failed to recreate sample: %s." % (FAIL,e))
+                    verbose("\t - %s -> failed to recreate sample: %s." % (utils.res.FAIL,e))
 
                     #sample reconstruction failed.. should we try check local disk for a sample?
                     if args['find_sample']:
                         verbose("\t - Searching for sample on local disk")
                         sample_file = find_file(os.path.dirname(fpath), sample.get_filename(), sample.get_crc())
                         if sample_file:
-                            verbose("\t\t - %s - Found sample -> %s" % (SUCCESS, sample_file))
+                            verbose("\t\t - %s - Found sample -> %s" % (utils.res.SUCCESS, sample_file))
                             try:
                                 shutil.move(sample_file, os.path.dirname(srs_path))
                                 release_list[release['release']]['resample'] = True
                             except Exception as e:
-                                verbose("\t\t - %s - Could not copy file to %s -> %s" % (FAIL, os.path.dirname(srs_path), e))
+                                verbose("\t\t - %s - Could not copy file to %s -> %s" % (utils.res.FAIL, os.path.dirname(srs_path), e))
                                 missing_files.append(release['release']+"/Sample/"+sample.get_filename())
                         else:
                             missing_files.append(release['release']+"/Sample/"+sample.get_filename())
@@ -466,17 +390,17 @@ def check_file(args, fpath):
                         missing_files.append(release['release']+"/Sample/"+sample.get_filename())
                 else:
                     verbose("-------------------------------")
-                    verbose("\t - %s -> sample recreated successfully" % (SUCCESS))
+                    verbose("\t - %s -> sample recreated successfully" % (utils.res.SUCCESS))
                     release_list[release['release']]['resample'] = True
                     if not args['keep_srs']:
                         if os.path.exists(srs_path):
                             os.remove(srs_path)
                         else:
-                            verbose("\t - Impossible to delete no SRS found %s" % (FAIL))
+                            verbose("\t - Impossible to delete no SRS found %s" % (utils.res.FAIL))
             else:
                 missing_files.append(release['release']+"/Sample/"+sample.get_filename())
         else:
-            verbose("\t - No SRS found for sample recreation %s" % (FAIL))
+            verbose("\t - No SRS found for sample recreation %s" % (utils.res.FAIL))
 
     if (args['resubs'] or args['auto_reconstruct']) and not release_list[release['release']]['resubs']:
         sub_srr = ""
@@ -511,11 +435,11 @@ def check_file(args, fpath):
             try:
                 matches = subs_srr.extract_stored_files_regex(os.path.dirname(sub_srr), regex="^(?:(.+\.)((?!diz$)[^.]*)|[^.]+)$")
             except Exception as e:
-                verbose("%s -> %s" % (FAIL, e))
+                verbose("%s -> %s" % (utils.res.FAIL, e))
                 return False
 
             else:
-                verbose("%s" % SUCCESS)
+                verbose("%s" % utils.res.SUCCESS)
 
                 for match in matches:
                     if match[0].endswith(".srr"):
@@ -536,26 +460,26 @@ def check_file(args, fpath):
                     if subs_srr_2.get_is_compressed():
                         verbose("\n\t - WARNING ! RAR Compression is used, reconstruction may not work", end="")
 
-                    subs_srr_2.reconstruct_rars(os.path.dirname(sub_file), os.path.dirname(sub_srr), rename_hints_subs, rar_version, srr_temp_foder)
+                    subs_srr_2.reconstruct_rars(os.path.dirname(sub_file), os.path.dirname(sub_srr), rename_hints_subs, utils.res.rar_version, utils.res.srr_temp_foder)
                 except Exception as e:
-                    verbose("%s -> %s" % (FAIL, e))
+                    verbose("%s -> %s" % (utils.res.FAIL, e))
                     if subs_srr_2.get_is_compressed():
                         compressed_release.append(os.path.join(os.path.dirname(sub_file), rar_name_2))
                 else:
-                    verbose("%s" % (SUCCESS))
+                    verbose("%s" % (utils.res.SUCCESS))
                     rename_hints_subs = {subs_srr.filename: os.path.basename(idx_file)}
                     verbose("\t - Reconstructing second RAR for Subs", end="")
                     try:
                         if subs_srr.get_is_compressed():
                             verbose("\n\t - WARNING ! RAR Compression is used, reconstruction may not work", end="")
 
-                        subs_srr.reconstruct_rars(os.path.dirname(idx_file), os.path.dirname(sub_srr), rename_hints_subs, rar_version, srr_temp_foder)
+                        subs_srr.reconstruct_rars(os.path.dirname(idx_file), os.path.dirname(sub_srr), rename_hints_subs, utils.res.rar_version, utils.res.srr_temp_foder)
                     except Exception as e:
-                        verbose("%s -> %s" % (FAIL, e))
+                        verbose("%s -> %s" % (utils.res.FAIL, e))
                         if subs_srr.get_is_compressed():
                             compressed_release.append(os.path.join(os.path.dirname(idx_file), rar_name))
                     else:
-                        verbose("%s" % (SUCCESS))                            
+                        verbose("%s" % (utils.res.SUCCESS))                            
             else:
                 rename_hints_subs = {subs_srr.filename: os.path.basename(idx_file)}
                 verbose("\t - Reconstructing second RAR for Subs", end="")
@@ -563,20 +487,20 @@ def check_file(args, fpath):
                     if subs_srr.get_is_compressed():
                         verbose("\n\t - WARNING ! RAR Compression is used, reconstruction may not work", end="")
 
-                    subs_srr.reconstruct_rars(os.path.dirname(idx_file), os.path.dirname(sub_srr), rename_hints_subs, rar_version, srr_temp_foder)
+                    subs_srr.reconstruct_rars(os.path.dirname(idx_file), os.path.dirname(sub_srr), rename_hints_subs, utils.res.rar_version, utils.res.srr_temp_foder)
                 except Exception as e:
-                    verbose("%s -> %s" % (FAIL, e))
+                    verbose("%s -> %s" % (utils.res.FAIL, e))
                     if subs_srr.get_is_compressed():
                         compressed_release.append(os.path.join(os.path.dirname(idx_file), rar_name))
                 else:
-                    verbose("%s" % (SUCCESS))   
+                    verbose("%s" % (utils.res.SUCCESS))   
 
         verbose("\t - Checking if RAR for Subs have good CRC in %s" % (os.path.dirname(sub_sfv)))
         try:
             sfv_f = open(sub_sfv, "r")
             sfv_p = os.path.dirname(sub_sfv)
         except Exception as e:
-            verbose("\t\t - %s - Could not open sfv file %s -> %s" % (FAIL, sub_sfv, e))
+            verbose("\t\t - %s - Could not open sfv file %s -> %s" % (utils.res.FAIL, sub_sfv, e))
 
         for line in sfv_f:
             # Skip comments.
@@ -587,11 +511,11 @@ def check_file(args, fpath):
             if not (filename and crc): continue
 
             if not os.path.exists(os.path.join(fpath, os.path.join(sfv_p, filename))):
-                verbose("\t\t - %s -> Be careful missing Subs file: %s" % (FAIL, filename))
+                verbose("\t\t - %s -> Be careful missing Subs file: %s" % (utils.res.FAIL, filename))
                 verbose("\t - Searching for Subs on local disk")
                 subs_file = find_file(os.path.dirname(fpath), filename, crc.upper())
                 if subs_file:
-                    verbose("\t\t - %s - Found Subs -> %s" % (SUCCESS, subs_file))
+                    verbose("\t\t - %s - Found Subs -> %s" % (utils.res.SUCCESS, subs_file))
                     try:
                         shutil.move(subs_file, os.path.dirname(sub_srr))
                         release_list[release['release']]['resubs'] = True
@@ -603,23 +527,23 @@ def check_file(args, fpath):
                             if os.path.exists(os.path.join(os.path.dirname(sub_srr), rar_name_2)):
                                 os.remove(os.path.join(os.path.dirname(sub_srr), rar_name_2))
                     except Exception as e:
-                        verbose("\t\t - %s - Could not copy file to %s -> %s" % (FAIL, os.path.dirname(sub_srr), e))
+                        verbose("\t\t - %s - Could not copy file to %s -> %s" % (utils.res.FAIL, os.path.dirname(sub_srr), e))
                         missing_files.append(os.path.join(fpath, os.path.join(sfv_p, filename)))
 
                 else:
-                    verbose("\t\t - %s - Subs RAR not found" % (FAIL))
+                    verbose("\t\t - %s - Subs RAR not found" % (utils.res.FAIL))
                     missing_files.append(os.path.join(fpath, os.path.join(sfv_p, filename)))
                 continue
 
             hash = calc_crc(os.path.join(fpath, os.path.join(sfv_p, filename)))
             if hash.lower() == crc.lower():
-                verbose("\t\t - %s -> %s %s" % (SUCCESS, filename, hash.upper()))
+                verbose("\t\t - %s -> %s %s" % (utils.res.SUCCESS, filename, hash.upper()))
             else:
-                verbose("\t\t - %s -> %s our hash %s does not match %s" % (FAIL, filename, hash.upper(), crc.upper()))
+                verbose("\t\t - %s -> %s our hash %s does not match %s" % (utils.res.FAIL, filename, hash.upper(), crc.upper()))
                 verbose("\t - Searching for Subs on local disk")
                 subs_file = find_file(os.path.dirname(fpath), filename, crc.upper())
                 if subs_file:
-                    verbose("\t\t - %s - Found Subs -> %s" % (SUCCESS, subs_file))
+                    verbose("\t\t - %s - Found Subs -> %s" % (utils.res.SUCCESS, subs_file))
                     try:
                         shutil.move(subs_file, os.path.dirname(sub_srr))
                         release_list[release['release']]['resubs'] = True
@@ -631,11 +555,11 @@ def check_file(args, fpath):
                             if os.path.exists(sub_srr_2):
                                 os.remove(sub_srr_2)
                     except Exception as e:
-                        verbose("\t\t - %s - Could not copy file to %s -> %s" % (FAIL, os.path.dirname(sub_srr), e))
+                        verbose("\t\t - %s - Could not copy file to %s -> %s" % (utils.res.FAIL, os.path.dirname(sub_srr), e))
                         missing_files.append(os.path.join(fpath, os.path.join(sfv_p, filename)))
 
                 else:
-                    verbose("\t\t - %s - Subs RAR not found" % (FAIL))
+                    verbose("\t\t - %s - Subs RAR not found" % (utils.res.FAIL))
                     missing_files.append(os.path.join(fpath, os.path.join(sfv_p, filename)))
         sfv_f.close()
         if not args['keep_srr']:
@@ -692,12 +616,12 @@ def check_dir(args, fpath):
     verbose("\t - Downloading SRR from srrdb.com", end="")
     # download srr
     try:
-        srr_path = download_srr(release['release'])
+        srr_path = utils.res.download_srr(release['release'], s)
     except Exception as e:
-        verbose("%s -> %s" % (FAIL, e))
+        verbose("%s -> %s" % (utils.res.FAIL, e))
         return False
     else:
-        verbose("%s" % SUCCESS)
+        verbose("%s" % utils.res.SUCCESS)
 
     release_srr = SRR(srr_path)
     srr_finfo = release_srr.get_rars_name()
@@ -707,10 +631,10 @@ def check_dir(args, fpath):
             verbose("\t - Checking if all RAR are present in %s" % (fpath))
             for match in srr_finfo:
                 if not os.path.exists(os.path.join(fpath, os.path.normpath(match))):
-                    verbose("\t\t - %s -> Be careful missing RAR file: %s" % (FAIL, match))
+                    verbose("\t\t - %s -> Be careful missing RAR file: %s" % (utils.res.FAIL, match))
                     missing_files.append(release['release']+"/"+os.path.normpath(match))
                 else:
-                    verbose("\t\t - %s -> %s" % (SUCCESS, match))
+                    verbose("\t\t - %s -> %s" % (utils.res.SUCCESS, match))
 
             release_list[release['release']]['rescene'] = True
             if len(missing_files) == len(missing_rar):
@@ -720,10 +644,10 @@ def check_dir(args, fpath):
             srr_sfv_info = release_srr.get_sfv_entries_name()
             for match in srr_sfv_info:
                 if not os.path.exists(os.path.join(fpath, match)):
-                    verbose("\t\t - %s -> Be careful missing file: %s" % (FAIL, match))
+                    verbose("\t\t - %s -> Be careful missing file: %s" % (utils.res.FAIL, match))
                     missing_files.append(release['release']+"/"+match)
                 else:
-                    verbose("\t\t - %s -> %s" % (SUCCESS, match))
+                    verbose("\t\t - %s -> %s" % (utils.res.SUCCESS, match))
 
             release_list[release['release']]['rescene'] = True
             if len(missing_files) == len(missing_rar):
@@ -742,7 +666,7 @@ def check_dir(args, fpath):
                 sfv_f = open(sfv, "r")
                 sfv_p = os.path.dirname(sfv)
             except Exception as e:
-                verbose("\t\t - %s - Could not open sfv file %s -> %s" % (FAIL, sfv, e))
+                verbose("\t\t - %s - Could not open sfv file %s -> %s" % (utils.res.FAIL, sfv, e))
 
             for line in sfv_f:
                 # Skip comments.
@@ -753,16 +677,16 @@ def check_dir(args, fpath):
                 if not (filename and crc): continue
 
                 if not os.path.exists(os.path.join(fpath, os.path.join(sfv_p, filename))):
-                    verbose("\t\t - %s -> Be careful missing RAR file: %s" % (FAIL, filename))
+                    verbose("\t\t - %s -> Be careful missing RAR file: %s" % (utils.res.FAIL, filename))
                     missing_files.append(os.path.join(fpath, os.path.join(sfv_p, filename)))
 
                     continue
 
                 hash = calc_crc(os.path.join(fpath, os.path.join(sfv_p, filename)))
                 if hash.lower() == crc.lower():
-                    verbose("\t\t - %s -> %s %s" % (SUCCESS, filename, hash.upper()))
+                    verbose("\t\t - %s -> %s %s" % (utils.res.SUCCESS, filename, hash.upper()))
                 else:
-                    verbose("\t\t - %s -> %s our hash %s does not match %s" % (FAIL, filename, hash.upper(), crc.upper()))
+                    verbose("\t\t - %s -> %s our hash %s does not match %s" % (utils.res.FAIL, filename, hash.upper(), crc.upper()))
                     missing_files.append(os.path.join(fpath, os.path.join(sfv_p, filename)))
 
             sfv_f.close()
@@ -776,12 +700,12 @@ def check_dir(args, fpath):
         if not os.path.isdir(doutput):
             verbose("\t - Creating output directory: %s" % (doutput), end="")
             try:
-                mkdir(doutput)
+                utils.res.mkdir(doutput)
             except Exception as e:
-                verbose("%s -> Unable to create directory: %s" % (FAIL, e))
+                verbose("%s -> Unable to create directory: %s" % (utils.res.FAIL, e))
                 return False
             else:
-                verbose("%s" % (SUCCESS))
+                verbose("%s" % (utils.res.SUCCESS))
 
     verbose("\t - Setting output directory to: %s" % doutput)
 
@@ -797,11 +721,11 @@ def check_dir(args, fpath):
                 matches = release_srr.extract_stored_files_regex(doutput, regex="^(?:(.+\.)((?!srs$)[^.]*)|[^.]+)$")
 
         except Exception as e:
-            verbose("%s -> %s" % (FAIL, e))
+            verbose("%s -> %s" % (utils.res.FAIL, e))
             return False
 
         else:
-            verbose("%s" % SUCCESS)
+            verbose("%s" % utils.res.SUCCESS)
             proof_path = ""
             for match in matches:
                 if match[0].endswith(".srs"):
@@ -820,14 +744,14 @@ def check_dir(args, fpath):
             proof_crc = calc_crc(proof_path)
             proof_file = find_file(os.path.dirname(fpath), os.path.basename(*release_srr.get_proof_filename()), proof_crc)
             if proof_file and proof_file.lower() != proof_path.lower():
-                verbose("\t\t - %s - Found proof -> %s" % (SUCCESS, proof_file))
+                verbose("\t\t - %s - Found proof -> %s" % (utils.res.SUCCESS, proof_file))
                 try:
                     copy_file(proof_file, os.path.dirname(proof_path))
                     if not args['keep_srs']:
                         if os.path.exists(proof_file):
                             os.remove(proof_file)
                 except Exception as e:
-                    verbose("\t\t - %s - Could not copy proof file to %s -> %s" % (FAIL, os.path.dirname(proof_path), e))
+                    verbose("\t\t - %s - Could not copy proof file to %s -> %s" % (utils.res.FAIL, os.path.dirname(proof_path), e))
                     missing_files.append(release['release']+release_srr.get_proof_filename())
         if release['hasSRS'] == "yes" and len(srr_finfo) > 0:
             try:
@@ -839,7 +763,7 @@ def check_dir(args, fpath):
                 release_srs = release_srr.get_srs(doutput)
 
                 if len(release_srs) != 1:
-                    verbose("%s -> more than one SRS in this SRR.  Please reconstruct manually." % FAIL)
+                    verbose("%s -> more than one SRS in this SRR.  Please reconstruct manually." % utils.res.FAIL)
                 else:
                     srs_path = release_srs[0][0]
 
@@ -849,7 +773,7 @@ def check_dir(args, fpath):
                 verbose("\t - Searching for sample on local disk")
                 sample_file = find_file(os.path.dirname(fpath), sample.get_filename(), sample.get_crc())
                 if sample_file:
-                    verbose("\t\t - %s - Found sample -> %s" % (SUCCESS, sample_file))
+                    verbose("\t\t - %s - Found sample -> %s" % (utils.res.SUCCESS, sample_file))
                     if os.path.dirname(sample_file.lower()) != os.path.dirname(srs_path.lower()):
                         try:
                             shutil.move(sample_file, os.path.dirname(srs_path))
@@ -858,9 +782,9 @@ def check_dir(args, fpath):
                                 if os.path.exists(srs_path):
                                     os.remove(srs_path)
                                 else:
-                                    verbose("\t - Impossible to delete no SRS found %s" % (FAIL))
+                                    verbose("\t - Impossible to delete no SRS found %s" % (utils.res.FAIL))
                         except Exception as e:
-                            verbose("\t\t - %s - Could not copy file to %s -> %s" % (FAIL, os.path.dirname(srs_path), e))
+                            verbose("\t\t - %s - Could not copy file to %s -> %s" % (utils.res.FAIL, os.path.dirname(srs_path), e))
                             missing_files.append(release['release']+"/Sample/"+sample.get_filename())
                     
                     release_list[release['release']]['resample'] = True
@@ -868,31 +792,31 @@ def check_dir(args, fpath):
                         if os.path.exists(srs_path):
                             os.remove(srs_path)
                         else:
-                            verbose("\t - Impossible to delete no SRS found %s" % (FAIL))
+                            verbose("\t - Impossible to delete no SRS found %s" % (utils.res.FAIL))
                 else:
                     #we try sample reconstruction
-                    verbose("\t - Sample found have Bad CRC or no sample foud %s" % (FAIL))
+                    verbose("\t - Sample found have Bad CRC or no sample foud %s" % (utils.res.FAIL))
                     verbose("\t - Recreating Sample .. expect output from SRS\n-------------------------------")
                     try:
                         sample.recreate(rar_path, os.path.dirname(srs_path))
                     except Exception as e:
                         verbose("-------------------------------")
-                        verbose("\t - %s -> failed to recreate sample: %s." % (FAIL,e))
+                        verbose("\t - %s -> failed to recreate sample: %s." % (utils.res.FAIL,e))
                         missing_files.append(release['release']+"/Sample/"+sample.get_filename())
 
                     else:
                         verbose("-------------------------------")
-                        verbose("\t - %s -> sample recreated successfully" % (SUCCESS))
+                        verbose("\t - %s -> sample recreated successfully" % (utils.res.SUCCESS))
                         release_list[release['release']]['resample'] = True
                         if not args['keep_srs']:
                             if os.path.exists(srs_path):
                                 os.remove(srs_path)
                             else:
-                                verbose("\t - Impossible to delete no SRS found %s" % (FAIL))
+                                verbose("\t - Impossible to delete no SRS found %s" % (utils.res.FAIL))
             else:
                 missing_files.append(release['release']+"/Sample/"+sample.get_filename())
         else:
-            verbose("\t - No SRS found for sample recreation %s" % (FAIL))
+            verbose("\t - No SRS found for sample recreation %s" % (utils.res.FAIL))
 
     if (args['check_extras']) and not release_list[release['release']]['resubs']:
         sub_srr = ""
@@ -927,11 +851,11 @@ def check_dir(args, fpath):
             try:
                 matches = subs_srr.extract_stored_files_regex(os.path.dirname(sub_srr), regex="^(?:(.+\.)((?!diz$)[^.]*)|[^.]+)$")
             except Exception as e:
-                verbose("%s -> %s" % (FAIL, e))
+                verbose("%s -> %s" % (utils.res.FAIL, e))
                 return False
 
             else:
-                verbose("%s" % SUCCESS)
+                verbose("%s" % utils.res.SUCCESS)
 
                 for match in matches:
                     if match[0].endswith(".srr"):
@@ -952,26 +876,26 @@ def check_dir(args, fpath):
                     if subs_srr_2.get_is_compressed():
                         verbose("\n\t - WARNING ! RAR Compression is used, reconstruction may not work", end="")
 
-                    subs_srr_2.reconstruct_rars(os.path.dirname(sub_file), os.path.dirname(sub_srr), rename_hints_subs, rar_version, srr_temp_foder)
+                    subs_srr_2.reconstruct_rars(os.path.dirname(sub_file), os.path.dirname(sub_srr), rename_hints_subs, utils.res.rar_version, utils.res.srr_temp_foder)
                 except Exception as e:
-                    verbose("%s -> %s" % (FAIL, e))
+                    verbose("%s -> %s" % (utils.res.FAIL, e))
                     if subs_srr_2.get_is_compressed():
                         compressed_release.append(os.path.join(os.path.dirname(sub_file), rar_name_2))
                 else:
-                    verbose("%s" % (SUCCESS))
+                    verbose("%s" % (utils.res.SUCCESS))
                     rename_hints_subs = {subs_srr.filename: os.path.basename(idx_file)}
                     verbose("\t - Reconstructing second RAR for Subs", end="")
                     try:
                         if subs_srr.get_is_compressed():
                             verbose("\n\t - WARNING ! RAR Compression is used, reconstruction may not work", end="")
 
-                        subs_srr.reconstruct_rars(os.path.dirname(idx_file), os.path.dirname(sub_srr), rename_hints_subs, rar_version, srr_temp_foder)
+                        subs_srr.reconstruct_rars(os.path.dirname(idx_file), os.path.dirname(sub_srr), rename_hints_subs, utils.res.rar_version, utils.res.srr_temp_foder)
                     except Exception as e:
-                        verbose("%s -> %s" % (FAIL, e))
+                        verbose("%s -> %s" % (utils.res.FAIL, e))
                         if subs_srr.get_is_compressed():
                             compressed_release.append(os.path.join(os.path.dirname(idx_file), rar_name))
                     else:
-                        verbose("%s" % (SUCCESS))                            
+                        verbose("%s" % (utils.res.SUCCESS))                            
             else:
                 rename_hints_subs = {subs_srr.filename: os.path.basename(idx_file)}
                 verbose("\t - Reconstructing second RAR for Subs", end="")
@@ -979,20 +903,20 @@ def check_dir(args, fpath):
                     if subs_srr.get_is_compressed():
                         verbose("\n\t - WARNING ! RAR Compression is used, reconstruction may not work", end="")
 
-                    subs_srr.reconstruct_rars(os.path.dirname(idx_file), os.path.dirname(sub_srr), rename_hints_subs, rar_version, srr_temp_foder)
+                    subs_srr.reconstruct_rars(os.path.dirname(idx_file), os.path.dirname(sub_srr), rename_hints_subs, utils.res.rar_version, utils.res.srr_temp_foder)
                 except Exception as e:
-                    verbose("%s -> %s" % (FAIL, e))
+                    verbose("%s -> %s" % (utils.res.FAIL, e))
                     if subs_srr.get_is_compressed():
                         compressed_release.append(os.path.join(os.path.dirname(idx_file), rar_name))
                 else:
-                    verbose("%s" % (SUCCESS))   
+                    verbose("%s" % (utils.res.SUCCESS))   
 
         verbose("\t - Checking if RAR for Subs have good CRC in %s" % (os.path.dirname(sub_sfv)))
         try:
             sfv_f = open(sub_sfv, "r")
             sfv_p = os.path.dirname(sub_sfv)
         except Exception as e:
-            verbose("\t\t - %s - Could not open sfv file %s -> %s" % (FAIL, sub_sfv, e))
+            verbose("\t\t - %s - Could not open sfv file %s -> %s" % (utils.res.FAIL, sub_sfv, e))
 
         for line in sfv_f:
             # Skip comments.
@@ -1003,11 +927,11 @@ def check_dir(args, fpath):
             if not (filename and crc): continue
 
             if not os.path.exists(os.path.join(fpath, os.path.join(sfv_p, filename))):
-                verbose("\t\t - %s -> Be careful missing Subs file: %s" % (FAIL, filename))
+                verbose("\t\t - %s -> Be careful missing Subs file: %s" % (utils.res.FAIL, filename))
                 verbose("\t - Searching for Subs on local disk")
                 subs_file = find_file(os.path.dirname(fpath), filename, crc.upper())
                 if subs_file:
-                    verbose("\t\t - %s - Found Subs -> %s" % (SUCCESS, subs_file))
+                    verbose("\t\t - %s - Found Subs -> %s" % (utils.res.SUCCESS, subs_file))
                     try:
                         shutil.move(subs_file, os.path.dirname(sub_srr))
                         release_list[release['release']]['resubs'] = True
@@ -1019,23 +943,23 @@ def check_dir(args, fpath):
                             if os.path.exists(os.path.join(os.path.dirname(sub_srr), rar_name_2)):
                                 os.remove(os.path.join(os.path.dirname(sub_srr), rar_name_2))
                     except Exception as e:
-                        verbose("\t\t - %s - Could not copy file to %s -> %s" % (FAIL, os.path.dirname(sub_srr), e))
+                        verbose("\t\t - %s - Could not copy file to %s -> %s" % (utils.res.FAIL, os.path.dirname(sub_srr), e))
                         missing_files.append(os.path.join(fpath, os.path.join(sfv_p, filename)))
 
                 else:
-                    verbose("\t\t - %s - Subs RAR not found" % (FAIL))
+                    verbose("\t\t - %s - Subs RAR not found" % (utils.res.FAIL))
                     missing_files.append(os.path.join(fpath, os.path.join(sfv_p, filename)))
                 continue
 
             hash = calc_crc(os.path.join(fpath, os.path.join(sfv_p, filename)))
             if hash.lower() == crc.lower():
-                verbose("\t\t - %s -> %s %s" % (SUCCESS, filename, hash.upper()))
+                verbose("\t\t - %s -> %s %s" % (utils.res.SUCCESS, filename, hash.upper()))
             else:
-                verbose("\t\t - %s -> %s our hash %s does not match %s" % (FAIL, filename, hash.upper(), crc.upper()))
+                verbose("\t\t - %s -> %s our hash %s does not match %s" % (utils.res.FAIL, filename, hash.upper(), crc.upper()))
                 verbose("\t - Searching for Subs on local disk")
                 subs_file = find_file(os.path.dirname(fpath), filename, crc.upper())
                 if subs_file:
-                    verbose("\t\t - %s - Found Subs -> %s" % (SUCCESS, subs_file))
+                    verbose("\t\t - %s - Found Subs -> %s" % (utils.res.SUCCESS, subs_file))
                     try:
                         shutil.move(subs_file, os.path.dirname(sub_srr))
                         release_list[release['release']]['resubs'] = True
@@ -1047,11 +971,11 @@ def check_dir(args, fpath):
                             if os.path.exists(sub_srr_2):
                                 os.remove(sub_srr_2)
                     except Exception as e:
-                        verbose("\t\t - %s - Could not copy file to %s -> %s" % (FAIL, os.path.dirname(sub_srr), e))
+                        verbose("\t\t - %s - Could not copy file to %s -> %s" % (utils.res.FAIL, os.path.dirname(sub_srr), e))
                         missing_files.append(os.path.join(fpath, os.path.join(sfv_p, filename)))
 
                 else:
-                    verbose("\t\t - %s - Subs RAR not found" % (FAIL))
+                    verbose("\t\t - %s - Subs RAR not found" % (utils.res.FAIL))
                     missing_files.append(os.path.join(fpath, os.path.join(sfv_p, filename)))
         sfv_f.close()
         if not args['keep_srr']:
@@ -1085,17 +1009,13 @@ if __name__ == "__main__":
             sys.exit("output option needs to be a valid directory")
         verbose("Setting output directory to: " + args['output'] + "\n")
 
-    loginData = {"username": username, "password": password}
-    loginUrl = site + "account/login"
-    loginTestUrl = "https://www.srrdb.com/"
-    loginTestString = username
     verbose("\t - Connecting srrdb.com...", end="")
     try:
-        s = SRRDB_LOGIN(loginUrl, loginData, loginTestUrl, loginTestString)
+        s = SRRDB_LOGIN(utils.res.loginUrl, utils.res.loginData, utils.res.loginTestUrl, utils.res.loginTestString)
     except Exception as e:
-        verbose("%s -> %s" % (FAIL, e))
+        verbose("%s -> %s" % (utils.res.FAIL, e))
     else:
-        verbose("%s" % (SUCCESS))
+        verbose("%s" % (utils.res.SUCCESS))
 
     cwd = os.getcwd()
     if args['check_extras']:

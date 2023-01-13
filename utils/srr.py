@@ -1,6 +1,7 @@
-import os,re,subprocess
-import re
+import os, re, subprocess
 from rescene import info, extract_files, reconstruct
+from rescene.srr import display_info
+from utils.srs import SRS
 
 class SRR:
     def __init__(self, filename, binary=None):
@@ -18,6 +19,10 @@ class SRR:
                 self.binary = 'srr'
             else:
                 self.binary = binary
+
+    # display info about this SRR
+    def d_info(self):
+        return display_info(self.filename)
 
     # check if compression method is used for RAR file
     def get_is_compressed(self):
@@ -42,6 +47,22 @@ class SRR:
 
         return matches
 
+    def get_rars_nb(self):
+        matches = []
+
+        for sfile in info(self.filename)['rar_files'].values():
+            matches.append(sfile.file_name)
+
+        return len(matches)
+
+    def get_rars_size(self):
+        matches = []
+
+        for sfile in info(self.filename)['rar_files'].values():
+            matches.append(sfile.file_size)
+
+        return sum(matches)
+
     # search an srr for all non RAR files presents in all sfv file
     # returns array of FileInfo's
     def get_sfv_entries_name(self):
@@ -51,6 +72,14 @@ class SRR:
             matches += (str(sfile).split())
 
         return matches[::2]
+
+    def get_sfv_entries_nb(self):
+        matches = []
+
+        for sfile in info(self.filename)['sfv_entries']:
+            matches += (str(sfile).split())
+
+        return len(matches[::2])
 
     # search an srr for all files presents in srr
     # returns array of FileInfo's
@@ -100,11 +129,31 @@ class SRR:
         matches = []
         for sfile in info(self.filename)['stored_files'].keys():
             if sfile.endswith(".srs"):
-                result = extract_files(self.filename, path,
-                                       extract_paths=True, packed_name=sfile)
+                result = extract_files(self.filename, path, extract_paths=True, packed_name=sfile)
                 matches += result
 
         return matches
+
+    def get_srs_size(self, path):
+        if not os.path.isdir(path):
+            raise AttributeError("path must be a valid directory")
+
+        matches = []
+        match = []
+        srs_size = []
+        for sfile in info(self.filename)['stored_files'].keys():
+            if sfile.endswith(".srs"):
+                result = extract_files(self.filename, path, extract_paths=True, packed_name=sfile)
+                matches += result
+        
+        for (x,y) in matches:
+            match.append(x)
+
+        for srs_path in match:
+            srs = SRS(srs_path)
+            srs_size.append(srs.get_filesize())
+
+        return sum(srs_size)
 
     def get_proof_filename(self):
         matches = []
@@ -123,8 +172,7 @@ class SRR:
 
         for key in info(self.filename)["stored_files"].keys():
             if re.search(regex, key):
-                result = extract_files(self.filename, path,
-                                       extract_paths=True, packed_name=key)
+                result = extract_files(self.filename, path, extract_paths=True, packed_name=key)
                 matches += result
 
         return matches
@@ -141,9 +189,7 @@ class SRR:
                 os.mkdir(tmpfolder)
 
             try:
-                res = reconstruct(self.filename, dinput, doutput, hints=hints,
-                                  auto_locate_renamed=True, rar_executable_dir=rarfolder,
-                                  tmp_dir=tmpfolder, extract_files=False)
+                res = reconstruct(self.filename, dinput, doutput, hints=hints, auto_locate_renamed=True, rar_executable_dir=rarfolder, tmp_dir=tmpfolder, extract_files=False)
 
                 if res == -1:
                     raise ValueError("One or more of the original files already exist in " + doutput)
@@ -151,8 +197,7 @@ class SRR:
                 raise
         else:
             try:
-                res = reconstruct(self.filename, dinput, doutput, hints=hints,
-                                  auto_locate_renamed=True, extract_files=False)
+                res = reconstruct(self.filename, dinput, doutput, hints=hints, auto_locate_renamed=True, extract_files=False)
 
                 if res == -1:
                     raise ValueError("One or more of the original files already exist in " + doutput)
