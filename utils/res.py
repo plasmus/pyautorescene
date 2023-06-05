@@ -7,8 +7,8 @@ from colorama import Fore
 SUCCESS = Fore.GREEN + "  [SUCCESS] " + Fore.RESET
 FAIL = Fore.RED + "  [FAIL] " + Fore.RESET
 
-username = ""
-password = ""
+username = os.environ['USERNAME']
+password = os.environ['PASSWORD']
 site = "https://www.srrdb.com/"
 sitexxx= "https://www.srrxxx.com/"
 srrdb_api = "https://www.srrdb.com/api/search/"
