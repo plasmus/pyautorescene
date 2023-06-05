@@ -1,5 +1,10 @@
 Forked
 ------
+Forked from [jaloji](https://github.com/jaloji/pyautorescene)  
+added srrxxx option and docker usage below
+
+Forked
+------
 Forked from [sticki](https://bitbucket.org/sticki/pyautorescene)  
 
 pyautorescene
@@ -55,6 +60,7 @@ optional arguments:
   --rename              rename scene releases to their original scene
                         filenames
   -x, --extract-stored  extract stored files from srr (nfo, sfv, etc)
+  -z, --xxx             switch to srrxxx.com instead of srrdb.com
   -e EXTENSION, --extension EXTENSION
                         list of extensions to check against srrdb (default:
                         .mkv, .avi, .mp4, .iso)
@@ -69,3 +75,33 @@ optional arguments:
 To Do
 -----
 Make a better code for Subs reconstruction/check -> Working but little bugged, I'm not sure that will work with all subbed releases.
+
+Docker Image Creation/Usage
+-----
+###### Linux
+Clone https://github.com/srrDB/pyrescene or download and extract latest release
+
+Change directory into folder, you should see the setup.py file and clone this repository into it.
+
+Copy Dockerfile from repository up a level into pyrescene ```cp pyautorescene/Dockerfile .```
+
+Directory structure at end:
+```
+-<rootfolder>
+|_pyrescene
+  - setup.py
+  - Dockerfile
+  |_pyautorescene
+    - setup.py
+```
+Create the docker image: ```sudo docker build -t pyautorescene .```
+
+Example run of docker image: 
+```
+sudo docker run -rm \
+  --user $(id -u):$(id -g) \
+  -e USERNAME=$username -e PASSWORD=$password \
+  -v /mnt/cache/rescene/process:/process:ro \
+  -v /mnt/cache/rescene/complete:/complete \
+  pyautorescene
+```
