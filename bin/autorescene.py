@@ -48,6 +48,8 @@ def arg_parse():
                         help='rename scene releases to their original scene filenames')
     parser.add_argument('-x', '--extract-stored', action='store_true',
                         help='extract stored files from srr (nfo, sfv, etc)')
+    parser.add_argument('-z', '--xxx', action='store_true',
+                        help='switch to srrxxx.com instead of srrdb.com')
     parser.add_argument('-e', '--extension', action='append', default=[],
                         help='list of extensions to check against srrdb '
                         '(default: .mkv, .avi, .mp4, .iso)')
@@ -68,12 +70,14 @@ def arg_parse():
 
     return vars(args)
 
-def search_by_crc(crc):
+def search_by_crc(crc, xxx):
     if len(crc) != 8:
         #crc must have 8 characters
         raise ValueError("CRC must have length of 8")
 
     crc_search = utils.res.srrdb_api + "archive-crc:" + crc
+    if xxx:
+        crc_search = utils.res.srrxxx_api + "archive-crc:" + crc
 
     try:
         response = s.retrieveContent(crc_search)
@@ -86,11 +90,13 @@ def search_by_crc(crc):
 
     return data['results']
 
-def search_by_oso(hashfile):
+def search_by_oso(hashfile, xxx):
     if not hashfile or hashfile == "":
         raise ValueError("Release must have a valid OSO hash")
 
     name_search = utils.res.srrdb_api + "isdbhash:" + hashfile
+    if xxx:
+        name_search = utils.res.srrxxx_api + "isdbhash:" + hashfile
 
     try:
         response = s.retrieveContent(name_search)
@@ -147,11 +153,14 @@ def find_file(startdir, fname, fcrc):
 
     return False
 
-def search_srrdb_crc(crc, rlspath):
+def search_srrdb_crc(crc, rlspath, xxx):
     #search srrdb for releases matching crc32
-    verbose("\t - Searching srrdb.com for matching CRC", end="")
+    if xxx:
+        verbose("\t - Searching srrxxx.com for matching CRC", end="")
+    else:
+        verbose("\t - Searching srrdb.com for matching CRC", end="")
     try:
-        results = search_by_crc(crc)
+        results = search_by_crc(crc, xxx)
     except Exception as e:
         verbose("%s -> %s" % (utils.res.FAIL, e))
         return False
@@ -166,7 +175,10 @@ def search_srrdb_crc(crc, rlspath):
     # (this should only happen with dupe srr's being uploaded)
     if len(results) > 1:
         verbose("\t\t %s More than one release found matching CRC %s." % (utils.res.FAIL, crc))
-        verbose("\t - Searching srrdb.com for matching release name", end="")
+        if xxx:
+            verbose("\t - Searching srrxxx.com for matching release name", end="")
+        else:
+            verbose("\t - Searching srrdb.com for matching release name", end="")
         try:
             rlsname = os.path.basename(rlspath)
             results = utils.res.search_by_name(rlsname, s, isdir = False)
@@ -176,10 +188,13 @@ def search_srrdb_crc(crc, rlspath):
 
         if not results or len(results) > 1:
             verbose("%s -> %s" % (utils.res.FAIL, "No matching results"))
-            verbose("\t - Searching srrdb.com for matching OSO hash", end="")
+            if xxx:
+                verbose("\t - Searching srrxxx.com for matching OSO hash", end="")
+            else:
+                verbose("\t - Searching srrdb.com for matching OSO hash", end="")
             try:
                 OSOhash = calc_oso(rlspath)
-                results = search_by_oso(OSOhash)
+                results = search_by_oso(OSOhash, xxx)
             except Exception as e:
                 verbose("%s -> %s" % (utils.res.FAIL, e))
                 return False
@@ -201,12 +216,15 @@ def search_srrdb_crc(crc, rlspath):
 
     return release
 
-def search_srrdb_dirname(rlspath):
+def search_srrdb_dirname(rlspath, xxx):
     #search srrdb for release matching
-    verbose("\t - Searching srrdb.com for matching release name", end="")
+    if xxx:
+        verbose("\t - Searching srrxxx.com for matching release name", end="")
+    else:
+        verbose("\t - Searching srrdb.com for matching release name", end="")
     try:
         rlsname = os.path.basename(rlspath)
-        results = utils.res.search_by_name(rlsname, s, isdir = True)
+        results = utils.res.search_by_name(rlsname, s, xxx = xxx, isdir = True)
     except Exception as e:
         verbose("%s -> %s" % (utils.res.FAIL, e))
         return False
@@ -251,7 +269,7 @@ def check_file(args, fpath):
     else:
         verbose("%s -> %s" % (utils.res.SUCCESS, release_crc))
 
-    release = search_srrdb_crc(release_crc, fpath)
+    release = search_srrdb_crc(release_crc, fpath, xxx=args['xxx'])
     if not release:
         return False
     else:
@@ -266,10 +284,13 @@ def check_file(args, fpath):
             verbose("\t - Skipping, already processed.")
             return True
 
-    verbose("\t - Downloading SRR from srrdb.com", end="")
+    if args['xxx']:
+        verbose("\t - Downloading SRR from srrxxx.com", end="")
+    else:
+        verbose("\t - Downloading SRR from srrdb.com", end="")
     # download srr
     try:
-        srr_path = utils.res.download_srr(release['release'], s)
+        srr_path = utils.res.download_srr(release['release'], s, args['xxx'])
     except Exception as e:
         verbose("%s -> %s" % (utils.res.FAIL, e))
         return False
@@ -572,7 +593,7 @@ def check_file(args, fpath):
 
     release_list[release['release']]['resubs'] = True
 
-def check_dir(args, fpath):
+def check_dir(args, fpath, xxx):
     if os.path.basename(fpath.lower()) == "Proof".lower():
         return False
     if os.path.basename(fpath.lower()) == "Sample".lower():
@@ -598,7 +619,7 @@ def check_dir(args, fpath):
 
     verbose("* Found potential release: " + os.path.basename(fpath))
     scanned_release += 1
-    release = search_srrdb_dirname(fpath)
+    release = search_srrdb_dirname(fpath, xxx)
     if not release:
         return False
     else:
@@ -999,7 +1020,7 @@ if __name__ == "__main__":
     verbose = print if args['verbose'] else lambda *a, **k: None
 
     if not args['extension']:
-        args['extension'] = ['.mkv', '.avi', '.mp4', '.iso']
+        args['extension'] = ['.mkv', '.avi', '.mp4', '.iso','.wmv']
     if args['min_filesize']:
         #convert from MB to Bytes
         args['min_filesize'] = int(args['min_filesize']) * 1048576
@@ -1009,9 +1030,15 @@ if __name__ == "__main__":
             sys.exit("output option needs to be a valid directory")
         verbose("Setting output directory to: " + args['output'] + "\n")
 
-    verbose("\t - Connecting srrdb.com...", end="")
+    if args['xxx']:
+        verbose("\t - Connecting srrxxx.com...", end="")
+    else:
+        verbose("\t - Connecting srrdb.com...", end="")
     try:
-        s = SRRDB_LOGIN(utils.res.loginUrl, utils.res.loginData, utils.res.loginTestUrl, utils.res.loginTestString)
+        if args['xxx']:
+            s = SRRDB_LOGIN(utils.res.loginUrlxxx, utils.res.loginData, utils.res.loginTestUrlxxx, utils.res.loginTestString)
+        else:
+            s = SRRDB_LOGIN(utils.res.loginUrl, utils.res.loginData, utils.res.loginTestUrl, utils.res.loginTestString)
     except Exception as e:
         verbose("%s -> %s" % (utils.res.FAIL, e))
     else:
@@ -1023,7 +1050,7 @@ if __name__ == "__main__":
             if os.path.isdir(path):
                 for root, dirs, files in os.walk(path):
                     for dirname in dirs:
-                        check_dir(args, os.path.join(root, dirname))
+                        check_dir(args, os.path.join(root, dirname), args['xxx'])
     else:
         for path in args['input']:
             if os.path.isfile(path):

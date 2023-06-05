@@ -10,12 +10,17 @@ FAIL = Fore.RED + "  [FAIL] " + Fore.RESET
 username = ""
 password = ""
 site = "https://www.srrdb.com/"
+sitexxx= "https://www.srrxxx.com/"
 srrdb_api = "https://www.srrdb.com/api/search/"
+srrxxx_api = "https://www.srrxxx.com/api/search/"
 srrdb_download = "https://www.srrdb.com/download/srr/"
+srrxxx_download = "https://www.srrxxx.com/download/srr/"
 
 loginData = {"username": username, "password": password}
 loginUrl = site + "account/login"
+loginUrlxxx = sitexxx + "account/login"
 loginTestUrl = site
+loginTestUrlxxx = sitexxx
 loginTestString = username
 
 rar_version = "C:\\Python\\Python39\\pyrescene-master\\rarv"
@@ -32,14 +37,18 @@ def mkdir(path):
     else:
         return True
 
-def search_by_name(name, s, isdir = False):
+def search_by_name(name, s, xxx=False, isdir = False):
     if not name or name == "":
         raise ValueError("Release must have a valid name")
 
     if not isdir:
         name_search = srrdb_api + "r:" + name.rsplit( ".", 1 )[ 0 ]
+        if xxx:
+            name_search = srrxxx_api + "r:" + name.rsplit( ".", 1 )[ 0 ]
     else:
         name_search = srrdb_api + "r:" + name
+        if xxx:
+            name_search = srrxxx_api + "r:" + name
 
     try:
         response = s.retrieveContent(name_search)
@@ -52,11 +61,13 @@ def search_by_name(name, s, isdir = False):
 
     return data['results']
 
-def download_srr(rls, s, path=None):
+def download_srr(rls, s, xxx=False, path=None):
     if not rls or rls == "":
         raise ValueError("Release must have a valid name")
 
     srr_download = srrdb_download + rls
+    if xxx:
+        srr_download = srrxxx_download + rls
 
     if not path or path == "":
         path = tempfile.gettempdir()
