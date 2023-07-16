@@ -105,3 +105,9 @@ sudo docker run -rm \
   -v /mnt/cache/rescene/complete:/complete \
   pyautorescene
 ```
+
+Issues
+-----
+If you get a clock module not found in time error when using sample recreation on linux, you have to change all
+
+``` time.clock() ``` to ``` time.perf_counter() ``` inside the file ``` pyrescene/resample/srs.py ```
