@@ -1020,7 +1020,7 @@ if __name__ == "__main__":
     verbose = print if args['verbose'] else lambda *a, **k: None
 
     if not args['extension']:
-        args['extension'] = ['.mkv', '.avi', '.mp4', '.iso', '.wmv', '.m4v', '.f4v']
+        args['extension'] = ['.mkv', '.avi', '.mp4', '.iso', '.wmv', '.m4v', '.f4v', '.mpg', '.mpeg', '.mov']
     if args['min_filesize']:
         #convert from MB to Bytes
         args['min_filesize'] = int(args['min_filesize']) * 1048576
